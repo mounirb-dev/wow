@@ -1,6 +1,6 @@
 "use client";;
 import React, { useState } from "react";
-import { motion } from "motion/react";
+import { m } from "motion/react";
 import { cn } from "@/lib/utils";
 
 const themes = {
@@ -59,6 +59,13 @@ const BASE_HEIGHT = 270;
 const FLAP_PATH =
   "M0 25C0 11.1929 11.1929 0 25 0H136.084C143.044 0 149.689 2.90139 154.42 8.00608L178.08 33.5343C182.811 38.639 189.456 41.5404 196.416 41.5404H296C309.807 41.5404 321 52.7333 321 66.5404V216C321 229.807 309.807 241 296 241H25C11.1929 241 0 229.807 0 216V25Z";
 
+// Posición de cada hoja que asoma de la carpeta. Cada lista es [abierta, con hover, en reposo].
+const CARD_MOTION = [
+  { id: 1, y: [-160, -30, -10], x: [70, 40, 40], rotate: [18, 14, 10], delay: [0.1, 0.12, 0] },
+  { id: 2, y: [-180, -35, -20], x: [0, 3, 3], rotate: [-3, -1, 2], delay: [0.05, 0.06, 0] },
+  { id: 3, y: [-170, -44, -22], x: [-65, -40, -40], rotate: [-14, -9, -5], delay: [0, 0, 0] },
+];
+
 const FolderComponent = ({
   color = "black",
   size = "md",
@@ -69,6 +76,9 @@ const FolderComponent = ({
   const scale = sizeScales[size];
   const [isHovered, setIsHovered] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const pose = isOpen ? 0 : isHovered ? 1 : 2;
+  const toggle = () => setIsOpen((open) => !open);
+  const release = () => { setIsHovered(false); setIsOpen(false); };
 
   return (
     <div
@@ -80,6 +90,10 @@ const FolderComponent = ({
       {...props}
     >
       <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={isOpen}
+        aria-label="Abrir carpeta"
         className="relative cursor-pointer select-none"
         style={{
           width: BASE_WIDTH * scale,
@@ -88,11 +102,13 @@ const FolderComponent = ({
           WebkitTapHighlightColor: "transparent",
         }}
         onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => {
-          setIsHovered(false);
-          setIsOpen(false);
+        onMouseLeave={release}
+        onFocus={() => setIsHovered(true)}
+        onBlur={release}
+        onClick={toggle}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") { event.preventDefault(); toggle(); }
         }}
-        onClick={() => setIsOpen((o) => !o)}
       >
         <div
           className="absolute top-1/2 left-1/2"
@@ -116,57 +132,19 @@ const FolderComponent = ({
           </div>
 
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
-            <motion.div
-              className="absolute"
-              animate={{
-                y: isOpen ? -160 : isHovered ? -30 : -10,
-                x: isOpen ? 70 : 40,
-                rotate: isOpen ? 18 : isHovered ? 14 : 10,
-              }}
-              transition={{
-                type: "spring",
-                stiffness: 120,
-                damping: 13,
-                delay: isOpen ? 0.1 : isHovered ? 0.12 : 0,
-              }}
-            >
-              <Card id={1} theme={theme} />
-            </motion.div>
-            <motion.div
-              className="absolute"
-              animate={{
-                y: isOpen ? -180 : isHovered ? -35 : -20,
-                x: isOpen ? 0 : 3,
-                rotate: isOpen ? -3 : isHovered ? -1 : 2,
-              }}
-              transition={{
-                type: "spring",
-                stiffness: 120,
-                damping: 13,
-                delay: isOpen ? 0.05 : isHovered ? 0.06 : 0,
-              }}
-            >
-              <Card id={2} theme={theme} />
-            </motion.div>
-            <motion.div
-              className="absolute"
-              animate={{
-                y: isOpen ? -170 : isHovered ? -44 : -22,
-                x: isOpen ? -65 : -40,
-                rotate: isOpen ? -14 : isHovered ? -9 : -5,
-              }}
-              transition={{
-                type: "spring",
-                stiffness: 120,
-                damping: 13,
-                delay: isOpen ? 0 : 0,
-              }}
-            >
-              <Card id={3} theme={theme} />
-            </motion.div>
+            {CARD_MOTION.map(({ id, y, x, rotate, delay }) => (
+              <m.div
+                key={id}
+                className="absolute"
+                animate={{ y: y[pose], x: x[pose], rotate: rotate[pose] }}
+                transition={{ type: "spring", stiffness: 120, damping: 13, delay: delay[pose] }}
+              >
+                <Card id={id} theme={theme} />
+              </m.div>
+            ))}
           </div>
 
-          <motion.div
+          <m.div
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mt-4"
             style={{
               transformOrigin: "bottom center",
@@ -174,7 +152,7 @@ const FolderComponent = ({
               width: 321,
               height: 241,
             }}
-            animate={{ rotateX: isOpen ? -55 : isHovered ? -45 : -15 }}
+            animate={{ rotateX: [-55, -45, -15][pose] }}
             transition={{ type: "spring", stiffness: 120, damping: 14 }}
           >
             <div
@@ -187,7 +165,6 @@ const FolderComponent = ({
                 transform: "translateZ(0)",
                 backfaceVisibility: "hidden",
                 WebkitBackfaceVisibility: "hidden",
-                willChange: "transform",
               }}
             />
             <svg
@@ -249,7 +226,7 @@ const FolderComponent = ({
                 </filter>
               </defs>
             </svg>
-          </motion.div>
+          </m.div>
         </div>
       </div>
     </div>

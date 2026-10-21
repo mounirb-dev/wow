@@ -1,0 +1,28 @@
+# Misma puerta de calidad que el hook pre-push y que los agentes de IA: scripts/verify.mjs.
+# En CI no se puede omitir ningún paso (VERIFY_SKIP se ignora). Para que sea OBLIGATORIA, activa
+# en GitHub: Settings → Branches → regla para `main` → "Require status checks" → "verify".
+name: verify
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: bun install --frozen-lockfile
+      - run: node scripts/verify.mjs
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}

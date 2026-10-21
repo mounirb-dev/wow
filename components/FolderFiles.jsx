@@ -27,20 +27,25 @@ export default function FolderFiles({ folderId, initialFiles = [] }) {
     const selected = Array.from(event.target.files || []);
     if (!selected.length) return;
     setUploading(true);
-    const uploaded = [];
-    try {
-      for (const file of selected) {
-        const body = new FormData();
-        body.append("file", file);
-        const response = await fetch(`/api/workspace/folders/${folderId}/files`, { method: "POST", credentials: "include", body });
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error || `No se pudo subir ${file.name}`);
-        uploaded.push(payload.file);
+    // Subidas en paralelo: una que falle no impide guardar las demás.
+    const upload = async (file) => {
+      const body = new FormData();
+      body.append("file", file);
+      const response = await fetch(`/api/workspace/folders/${folderId}/files`, { method: "POST", credentials: "include", body });
+      if (!response.ok) {
+        const failure = await response.json().catch(() => ({}));
+        throw new Error(failure.error || `No se pudo subir ${file.name}`);
       }
-      setFiles((current) => [...uploaded, ...current]);
-      toast.success(`${uploaded.length} archivo${uploaded.length === 1 ? "" : "s"} guardado${uploaded.length === 1 ? "" : "s"}`);
-    } catch (error) {
-      toast.error(error.message);
+      return (await response.json()).file;
+    };
+    try {
+      const results = await Promise.allSettled(selected.map(upload));
+      const uploaded = results.filter((result) => result.status === "fulfilled").map((result) => result.value);
+      if (uploaded.length) {
+        setFiles((current) => [...uploaded, ...current]);
+        toast.success(`${uploaded.length} archivo${uploaded.length === 1 ? "" : "s"} guardado${uploaded.length === 1 ? "" : "s"}`);
+      }
+      for (const result of results) if (result.status === "rejected") toast.error(result.reason.message);
     } finally {
       setUploading(false);
     }

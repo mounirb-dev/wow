@@ -1,0 +1,5 @@
+#!/bin/sh
+# Hook pre-push: ejecuta la puerta de calidad completa (scripts/verify.mjs). Se activa solo
+# con `bun install` (script "prepare" → core.hooksPath). Si falla, git cancela el push.
+# No lo saltes con --no-verify: la CI repite exactamente la misma comprobación.
+exec node scripts/verify.mjs

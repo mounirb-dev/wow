@@ -13,8 +13,7 @@ export async function PATCH(request, { params }) {
   const context = await getWorkspaceContext();
   if (!context) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   if (!canEdit(context.member)) return NextResponse.json({ error: "Tu rol solo permite consultar" }, { status: 403 });
-  const { id: playerId } = await params;
-  const body = await request.json();
+  const [{ id: playerId }, body] = await Promise.all([params, request.json()]);
   const interest = interests.has(body.interest) ? body.interest : "pending";
   const notes = String(body.notes ?? "").trim().slice(0, 4000) || null;
   const rowId = `signal_${createHash("sha256").update(`${playerId}:${context.user.$id}`).digest("hex").slice(0, 29)}`;

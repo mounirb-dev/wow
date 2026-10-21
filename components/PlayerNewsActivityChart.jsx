@@ -1,11 +1,6 @@
-"use client";
-
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 
-const chartConfig = { noticias: { label: "Noticias", color: "var(--chart-3)" } };
-
+// Últimos 6 meses (el actual incluido) con el nº de noticias publicadas en cada uno.
 function buildData(news) {
   const now = new Date();
   const months = Array.from({ length: 6 }, (_, index) => {
@@ -21,10 +16,21 @@ function buildData(news) {
   return months;
 }
 
+// Gráfico de barras en HTML/CSS (sin librería de gráficos: 6 barras no justifican ~100 kB de
+// JavaScript). Es un componente de servidor y expone los datos como lista para lectores de pantalla.
 export default function PlayerNewsActivityChart({ news }) {
   const data = buildData(news);
+  const max = Math.max(1, ...data.map((item) => item.noticias));
   return <Card>
-    <CardHeader className="pb-2"><CardTitle className="text-base">Actividad de noticias</CardTitle><p className="text-sm text-muted-foreground">Menciones encontradas en los últimos seis meses.</p></CardHeader>
-    <CardContent className="pb-3"><ChartContainer config={chartConfig} className="h-[150px] w-full"><BarChart accessibilityLayer data={data} margin={{ top: 4, right: 4, left: -22, bottom: 0 }}><CartesianGrid vertical={false} /><XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} width={28} /><ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} /><Bar dataKey="noticias" fill="var(--color-noticias)" radius={3} /></BarChart></ChartContainer></CardContent>
+    <CardHeader className="pb-2"><CardTitle className="text-base">Actividad de noticias</CardTitle><p className="text-sm text-muted-foreground">Menciones encontradas en los últimos 6 meses.</p></CardHeader>
+    <CardContent className="pb-3">
+      <ul className="flex h-[150px] items-end gap-2" aria-label="Noticias por mes">
+        {data.map((item) => <li key={item.key} className="flex h-full min-w-0 flex-1 flex-col items-center gap-1" aria-label={`${item.month}: ${item.noticias} noticias`}>
+          <span className="text-xs tabular-nums text-muted-foreground" aria-hidden="true">{item.noticias}</span>
+          <div className="flex w-full flex-1 items-end" aria-hidden="true"><span className="w-full rounded-t bg-[var(--chart-3)]" style={{ height: `${(item.noticias / max) * 100}%`, minHeight: 2 }} /></div>
+          <span className="text-xs text-muted-foreground" aria-hidden="true">{item.month}</span>
+        </li>)}
+      </ul>
+    </CardContent>
   </Card>;
 }

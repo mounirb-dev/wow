@@ -15,7 +15,6 @@ import Hint from "./Hint.jsx";
 import ActivityChart from "./ActivityChart.jsx";
 import FolderCard from "./FolderCard.jsx";
 import PlayerFolder from "./PlayerFolder.jsx";
-import WorkspaceShell from "./WorkspaceShell.jsx";
 import { curve, fmtM, leverage, monthsLeft, negotiate, portfolio } from "@/lib/tools.js";
 
 // Anima un número de 0 a `target` con easing cúbico (solo cosmético).
@@ -47,7 +46,7 @@ export default function Terminal({ players, user }) {
   const aum = useCountUp(pf.aum);
   const pipeline = useCountUp(pf.pipeline);
   const player = rows.find((r) => r.id === sel) ?? sorted[0];
-  if (!players.length) return <div className="min-h-screen"><WorkspaceShell><main className="space-y-6 py-10"><header><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">cartera</p><h1 className="mt-2 text-4xl font-semibold tracking-tight">Aún no hay jugadores</h1><p className="mt-2 max-w-xl text-sm text-muted-foreground">La base de datos está conectada. Importa un perfil con una fuente para empezar.</p></header><Card><CardContent className="flex flex-wrap items-center justify-between gap-4 p-6"><div><p className="font-medium">Sin registros</p><p className="mt-1 text-sm text-muted-foreground">Todavía no hay jugadores en este workspace.</p></div><Button asChild><Link href="/players">Abrir jugadores</Link></Button></CardContent></Card></main></WorkspaceShell></div>;
+  if (!players.length) return <main className="space-y-6 py-10"><header><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">cartera</p><h1 className="mt-2 text-4xl font-semibold tracking-tight">Aún no hay jugadores</h1><p className="mt-2 max-w-xl text-sm text-muted-foreground">La base de datos está conectada. Importa un perfil con una fuente para empezar.</p></header><Card><CardContent className="flex flex-wrap items-center justify-between gap-4 p-6"><div><p className="font-medium">Sin registros</p><p className="mt-1 text-sm text-muted-foreground">Todavía no hay jugadores en este workspace.</p></div><Button asChild><Link href="/players">Abrir jugadores</Link></Button></CardContent></Card></main>;
   const top = sorted[0];
   const topSuitor = [...top.suitors].sort((a, b) => b.need - a.need)[0];
   const topBest = topSuitor ? curve(top, topSuitor).best : null;
@@ -56,7 +55,6 @@ export default function Terminal({ players, user }) {
 
   return (
     <div className="min-h-screen">
-      <WorkspaceShell>
       <header className="flex flex-wrap items-end justify-between gap-6 pb-4 pt-3">
         <div>
           <div className="mt-2 text-4xl font-semibold tabular-nums tracking-tight sm:text-6xl">{fmtM(aum)}</div>
@@ -207,7 +205,6 @@ export default function Terminal({ players, user }) {
           </Card>
         </div>
       </main>
-      </WorkspaceShell>
     </div>
   );
 }

@@ -7,7 +7,8 @@ import { TablesDB } from "node-appwrite";
 import { adminClient, listAll } from "@/lib/appwrite.js";
 import { revalidateNewsCache } from "@/lib/cache-tags.js";
 import { loadPlayers } from "@/lib/data.js";
-import { mapLimit, syncPlayerNews } from "@/lib/news-sync.js";
+import { mapLimit } from "@/lib/async.js";
+import { syncPlayerNews } from "@/lib/news-sync.js";
 import { getUser } from "@/lib/session.js";
 
 export const maxDuration = 60;

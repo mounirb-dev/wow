@@ -8,9 +8,8 @@ export async function PATCH(request, { params }) {
   const context = await getWorkspaceContext();
   if (!context) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   if (!canEdit(context.member)) return NextResponse.json({ error: "No tienes permiso para editar carpetas" }, { status: 403 });
-  const { id } = await params;
+  const [{ id }, body] = await Promise.all([params, request.json()]);
   const folder = await getFolder(context, id);
-  const body = await request.json();
   const data = {};
   if (body.name !== undefined) {
     const name = String(body.name).trim();

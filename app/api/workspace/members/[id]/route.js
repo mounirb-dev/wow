@@ -8,8 +8,7 @@ export async function PATCH(request, { params }) {
   const context = await getWorkspaceContext();
   if (!context) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   if (!canManage(context.member)) return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  const { id } = await params;
-  const body = await request.json();
+  const [{ id }, body] = await Promise.all([params, request.json()]);
   const member = await context.db.getRow(DB, "workspace_members", id);
   if (member.workspaceId !== context.workspace.$id) return NextResponse.json({ error: "Miembro no encontrado" }, { status: 404 });
   if (member.role === "owner") return NextResponse.json({ error: "El propietario no puede cambiarse desde aquí" }, { status: 400 });

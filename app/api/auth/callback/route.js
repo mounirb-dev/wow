@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { Account } from "node-appwrite";
 import { adminClient } from "@/lib/appwrite.js";
+import { safeNext } from "@/lib/safe-next.js";
 import { COOKIE, cookieOptions } from "@/lib/session.js";
 
 export async function GET(req) {
@@ -14,9 +15,7 @@ export async function GET(req) {
   const state = q.get("state");
   const nextCookie = (await cookies()).get("as_oauth_next")?.value;
   const nextParam = q.get("next");
-  const next = (nextCookie && nextCookie.startsWith("/") && !nextCookie.startsWith("//"))
-    ? nextCookie
-    : (nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/");
+  const next = safeNext(nextCookie, safeNext(nextParam));
   if (!stateCookie || !state || stateCookie !== state) return NextResponse.redirect(`${appUrl}/login?error=oauth_state`);
   try {
     const session = await new Account(adminClient()).createSession({ userId: q.get("userId"), secret: q.get("secret") });

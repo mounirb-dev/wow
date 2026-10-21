@@ -4,16 +4,12 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { Account } from "node-appwrite";
 import { adminClient } from "@/lib/appwrite.js";
-
-const nextPath = (value) => {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/";
-  return value;
-};
+import { safeNext } from "@/lib/safe-next.js";
 
 export async function GET(req, { params }) {
   const { provider } = await params;
   if (!["apple", "google"].includes(provider)) return new NextResponse("Provider not supported", { status: 404 });
-  const next = nextPath(new URL(req.url).searchParams.get("next"));
+  const next = safeNext(new URL(req.url).searchParams.get("next"));
   const appUrl = new URL(req.url).origin;
   const state = randomUUID();
   try {

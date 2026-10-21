@@ -58,29 +58,21 @@ Sin estas credenciales el botón de Google devuelve al login con un error.
 
 Para Apple añade también `APPLE_SERVICE_ID`, `APPLE_KEY_ID`, `APPLE_TEAM_ID` y `APPLE_P8_FILE` al entorno. Appwrite valida Google/Apple y mantiene sus sesiones; AgentSolver solo guarda la sesión de Appwrite en una cookie HTTP-only.
 
-La página de conexión MCP lee `NEXT_PUBLIC_MCP_URL` durante el build. Usa la URL HTTPS pública del servidor, por ejemplo `https://mcp.tudominio.com`.
+## Servidor MCP (remoto, con OAuth)
 
-## Servidor MCP
+El MCP es un endpoint HTTP en **`/mcp`** (Streamable HTTP, sin estado) protegido con OAuth 2.1 + PKCE. Cada usuario autoriza el acceso con su cuenta y solo ve los datos de su workspace. Herramientas (solo lectura): `list_clients`, `portfolio_summary`, `valuation`, `negotiation_brief`.
 
-El servidor MCP usa transporte `stdio`, por lo que funciona con clientes de escritorio como Claude Desktop sin exponer un endpoint público. En esta versión no hay una página OAuth ni un endpoint HTTP del MCP. Para añadir OAuth real habría que migrarlo a transporte HTTP y definir proveedor, callback y scopes.
+**Conectar Claude** (web, escritorio o móvil): Ajustes → Conectores → *Añadir conector personalizado* → URL `https://TU-DOMINIO/mcp`. Claude descubre el OAuth solo (`/.well-known/oauth-*`), te lleva a `/mcp/oauth` para iniciar sesión y pulsar *Autorizar acceso*.
 
-```bash
-bun run mcp
-```
+Cómo funciona (código en `lib/mcp-oauth.js`, `lib/mcp-http.js`, `app/mcp`, `app/api/mcp/oauth`):
 
-Ejemplo para Claude Desktop (`claude_desktop_config.json`):
+- Registro dinámico de clientes (RFC 7591), consentimiento en `/mcp/oauth`, canje de código con PKCE S256 y refresh tokens.
+- Tokens firmados con HMAC, sin tablas nuevas. La clave es `MCP_OAUTH_SECRET`; si no existe se deriva de `APPWRITE_API_KEY`. Rotarla invalida todos los accesos. Access token 1 h, refresh 30 días.
+- En cada llamada se vuelve a resolver la membresía del workspace del usuario: si lo expulsan, deja de ver datos aunque su token no haya caducado.
 
-```json
-{
-  "mcpServers": {
-    "agentsolver": {
-      "command": "bun",
-      "args": ["--env-file=.env.local", "mcp/server.ts"],
-      "cwd": "/ruta/al/repo"
-    }
-  }
-}
-```
+Probar en local: `bunx @modelcontextprotocol/inspector` y apuntar a `http://localhost:3000/mcp`.
+
+> El antiguo servidor `stdio` (`bun run mcp`) se eliminó: no tenía sesión de usuario y no podía saber de qué workspace leer.
 
 Herramientas: `list_clients`, `portfolio_summary`, `valuation`, `negotiation_brief`. Leen de la misma base de datos que la web.
 
@@ -95,15 +87,16 @@ Herramientas: `list_clients`, `portfolio_summary`, `valuation`, `negotiation_bri
 | `bun run appwrite:bootstrap` | Admin + proyecto + API key → `.env.local` |
 | `bun run appwrite:configure` | Plataforma web y Google OAuth (si hay credenciales) |
 | `bun run db:migrate` | Aplica migraciones pendientes (idempotente) |
-| `bun run mcp` | Servidor MCP TypeScript por stdio |
+| `bun test` | Tests unitarios y de integración |
+| `bun run verify` | Puerta de calidad completa (ver abajo) |
 
 ## Estructura
 
 ```
-app/            páginas, login y rutas API (auth)
+app/            páginas, login, rutas API y endpoint /mcp
 components/     Terminal, simulador y shadcn en components/ui
-lib/            acceso a Appwrite, cálculos derivados, caché y sesión
-mcp/server.ts   servidor MCP TypeScript
+lib/            acceso a Appwrite, cálculos, caché, sesión, MCP y OAuth
+tests/          tests (bun test)
 db/migrations/    migraciones versionadas de Appwrite (incluye Storage)
 scripts/        instalación, bootstrap, configuración y migrador
 ```
@@ -115,3 +108,9 @@ scripts/        instalación, bootstrap, configuración y migrador
 - **`fetch failed` al entrar:** Appwrite no está levantado; ejecuta `bun run appwrite:up`.
 - **Entornos sandbox/CI sin IPv6 o con `ulimit -n` bajo:** la consola de Appwrite escucha en IPv6 y ClickHouse pide 262144 descriptores de archivo. Hay que ajustarlo con un `docker-compose.override.yml` local (no incluido).
 - **Reiniciar desde cero:** `bun run appwrite:down`, borra `./appwrite` y los volúmenes de Docker `appwrite-*`, y repite los pasos.
+
+## Validación antes de subir cambios
+
+`bun run verify` es la **única puerta de calidad**: la ejecutan el hook `pre-push` (se instala solo con `bun install`), el hook de Claude Code (`.claude/settings.json`, que bloquea `git push` y las escrituras del MCP de GitHub) y la CI (`.github/workflows/verify.yml`). Pasos: lockfile, `bun test`, `next build`, `bun audit`, **Snyk** (`SNYK_TOKEN`) y **React Doctor 100/100 con 0 diagnósticos**. Detalles y reglas para agentes de IA en [`AGENTS.md`](AGENTS.md).
+
+Para que sea obligatoria de verdad: añade `SNYK_TOKEN` como secreto del repositorio y exige el check `verify` en la protección de la rama `main` (Settings → Branches).

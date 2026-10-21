@@ -1,11 +1,13 @@
 import { redirect } from "next/navigation";
+import { safeNext } from "@/lib/safe-next.js";
 import { getUser } from "@/lib/session.js";
 import ModernAnimatedSignIn from "@/components/ModernAnimatedSignIn.jsx";
 
 export const metadata = { title: "AgentSolver · Acceso" };
 
 export default async function Login({ searchParams }) {
-  if (await getUser()) redirect("/");
-  const { error } = await searchParams;
-  return <ModernAnimatedSignIn error={error} />;
+  const params = await searchParams;
+  if (await getUser()) redirect(safeNext(params.next));
+  const { error, next } = params;
+  return <ModernAnimatedSignIn error={error} next={safeNext(next)} />;
 }

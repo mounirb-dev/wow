@@ -1,6 +1,6 @@
 "use client";;
-import { useRef, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useId, useMemo, useRef, useState } from "react";
+import { AnimatePresence, m, useReducedMotion } from "motion/react";
 import { cn } from "@/lib/utils";
 
 const PATTERNS = {
@@ -104,6 +104,9 @@ export function OtpInput({
   // the slot the user deliberately moved to, so a full code only changes on purpose
   const editingAt = useRef(null);
   const reduceMotion = useReducedMotion();
+  // Identidad estable de cada hueco (no depende del orden en el que se pinta).
+  const baseId = useId();
+  const slotIds = useMemo(() => Array.from({ length }, (_, i) => `${baseId}-slot-${i}`), [baseId, length]);
 
   // padded, not joined: joining would close a gap left by a mid-code backspace
   const slots =
@@ -230,7 +233,7 @@ export function OtpInput({
       className={cn("relative inline-flex", className)}
       {...props}
     >
-      <motion.div
+      <m.div
         onFocus={(event) => {
           const index = inputs.current.indexOf(
             event.target,
@@ -253,7 +256,7 @@ export function OtpInput({
       >
         {slots.map((slot, index) => (
           <div
-            key={index}
+            key={slotIds[index]}
             ref={(el) => {
               cells.current[index] = el;
             }}
@@ -291,7 +294,7 @@ export function OtpInput({
 
             <AnimatePresence>
               {status === "success" && (
-                <motion.svg
+                <m.svg
                   aria-hidden
                   data-slot="otp-input-ring"
                   viewBox={`0 0 ${scale.px} ${scale.px}`}
@@ -299,7 +302,7 @@ export function OtpInput({
                   transition={{ duration: 0.15 }}
                   className="pointer-events-none absolute inset-0 size-full"
                 >
-                  <motion.rect
+                  <m.rect
                     x={1}
                     y={1}
                     width={scale.px - 2}
@@ -320,14 +323,14 @@ export function OtpInput({
                           }
                     }
                   />
-                </motion.svg>
+                </m.svg>
               )}
             </AnimatePresence>
 
             <span className="pointer-events-none absolute inset-0 grid place-items-center overflow-hidden">
               <AnimatePresence initial={false} custom={cleared}>
                 {slot && (
-                  <motion.span
+                  <m.span
                     key={slot}
                     custom={cleared}
                     variants={ROLL}
@@ -342,7 +345,7 @@ export function OtpInput({
                     )}
                   >
                     {mask ? "•" : slot}
-                  </motion.span>
+                  </m.span>
                 )}
               </AnimatePresence>
             </span>
@@ -350,7 +353,7 @@ export function OtpInput({
         ))}
 
         {caretVisible && (
-          <motion.span
+          <m.span
             aria-hidden
             data-slot="otp-input-caret"
             initial={false}
@@ -365,7 +368,7 @@ export function OtpInput({
             )}
           />
         )}
-      </motion.div>
+      </m.div>
     </div>
   );
 }

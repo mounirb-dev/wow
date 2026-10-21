@@ -1,14 +1,12 @@
-import { redirect } from "next/navigation";
 import Terminal from "@/components/Terminal.jsx";
-import { getUser } from "@/lib/session.js";
+import WorkspaceShell from "@/components/WorkspaceShell.jsx";
+import { requireUser } from "@/lib/session.js";
 import { loadPlayers } from "@/lib/data.js";
 
 // Raíz: exige sesión y entrega la cartera al cliente. force-dynamic porque depende de cookies.
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const user = await getUser();
-  if (!user) redirect("/login");
-  const players = await loadPlayers();
-  return <Terminal players={players} user={{ name: user.name, email: user.email }} />;
+  const [user, players] = await Promise.all([requireUser(), loadPlayers()]);
+  return <WorkspaceShell><Terminal players={players} user={{ name: user.name, email: user.email }} /></WorkspaceShell>;
 }

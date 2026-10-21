@@ -44,7 +44,10 @@ Una consulta sin filtro de workspace es una fuga de datos entre clientes.
 | `components/` | UI. `ui/` son piezas shadcn; el resto son componentes de la app. |
 | `db/migrations/` | Esquema de Appwrite, versionado y numerado. |
 | `scripts/` | Utilidades de entorno (`migrate`, `bootstrap`, `sync-news`…). |
-| `mcp/server.ts` | Servidor MCP local (stdio). Ver "Limitaciones". |
+| `app/mcp`, `app/api/mcp/oauth`, `app/.well-known` | Endpoint MCP remoto y su servidor OAuth (ver "MCP"). |
+| `lib/mcp-*.js` | Núcleo OAuth (tokens firmados, PKCE), herramientas MCP y manejador HTTP. |
+| `tests/` | `bun test`: fórmulas, utilidades, OAuth, endpoint MCP y puerta de calidad. |
+| `scripts/verify.mjs` | Puerta de calidad previa al push (ver "Calidad"). |
 
 ## Modelo de datos (tablas de Appwrite)
 
@@ -71,7 +74,15 @@ Los IDs de fila suelen ser **deterministas** (hash de las claves) para que crear
 
 Ver `docs/production-appwrite.md`. Las migraciones no se ejecutan en el build de Vercel.
 
+## MCP
+
+`/mcp` expone las herramientas de solo lectura por HTTP. La autenticación es OAuth 2.1 + PKCE con registro dinámico de clientes; clientes, códigos y tokens son JSON firmado con HMAC (`lib/mcp-oauth.js`), sin estado en base de datos. En cada llamada se resuelve de nuevo el workspace del usuario (`resolveWorkspaceContext`), así que la regla multi-tenant se mantiene: el token solo identifica al usuario, nunca da acceso a un workspace concreto. El flujo completo está probado en `tests/mcp-*.test.js`.
+
+## Calidad
+
+`bun run verify` (lockfile, tests, build, `bun audit`, Snyk, React Doctor 100/100) es la única puerta antes de subir cambios y la comparten el hook de git, el hook de Claude Code y la CI. Las reglas para agentes están en `AGENTS.md`.
+
 ## Limitaciones conocidas
 
-- `mcp/server.ts` llama a `loadPlayers()`, que necesita cookies de una petición web; en el proceso stdio no hay ninguna, así que sus herramientas fallan hasta decidir de qué workspace leer.
+- Los tokens MCP no se pueden revocar individualmente antes de caducar (sin estado). Rotar `MCP_OAUTH_SECRET` los invalida todos.
 - El ledger de migraciones de producción usa nombres distintos a los archivos del repo; `bun scripts/migrate.mjs` no es seguro allí sin reconciliarlo.

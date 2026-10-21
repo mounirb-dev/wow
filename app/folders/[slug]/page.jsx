@@ -22,10 +22,7 @@ const folders = {
 
 export default async function FolderPage({ params, searchParams }) {
   await requireUser();
-  const { slug } = await params;
-  const query = await searchParams;
-  const context = await getWorkspaceContext();
-  const players = await loadPlayers();
+  const [{ slug }, query, context, players] = await Promise.all([params, searchParams, getWorkspaceContext(), loadPlayers()]);
   const sharedFolders = context ? await listFolders(context) : [];
   const record = sharedFolders.find((item) => item.$id === slug);
   const isCustom = !folders[slug];

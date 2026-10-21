@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const fitFields = [["tacticalFit", "Encaje táctico"], ["availability", "Disponibilidad"], ["adaptationRisk", "Riesgo de adaptación"]];
@@ -11,19 +12,28 @@ function initialData(player) {
 
 export default function PlayerFitPanel({ player }) {
   const [data, setData] = useState(() => initialData(player));
-  const hydrated = useRef(false);
+  const saveTimer = useRef(null);
   const match = useMemo(() => [data.tacticalFit, data.availability, data.adaptationRisk].every((value) => value !== null && value !== "" && value !== undefined) ? Math.round((Number(data.tacticalFit) + Number(data.availability) + (100 - Number(data.adaptationRisk))) / 3) : null, [data]);
   const matchLabel = match === null ? "Pendiente de valorar" : match >= 75 ? "Encaje alto" : match >= 50 ? "Encaje por revisar" : "Encaje bajo";
 
-  function update(field, value) { setData((current) => ({ ...current, [field]: value })); }
-
-  useEffect(() => {
-    if (!hydrated.current) { hydrated.current = true; return; }
-    const timeout = window.setTimeout(() => {
-      fetch(`/api/players/${player.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ tacticalFit: data.tacticalFit, availability: data.availability, adaptationRisk: data.adaptationRisk }) });
+  // Autoguardado con debounce (450 ms) lanzado desde el manejador del control, no desde un efecto:
+  // solo se guarda cuando el usuario mueve un deslizador, nunca al montar ni al cambiar de jugador.
+  function update(field, value) {
+    const next = { ...data, [field]: value };
+    setData(next);
+    window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/players/${player.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ tacticalFit: next.tacticalFit, availability: next.availability, adaptationRisk: next.adaptationRisk }) });
+        if (!response.ok) toast.error("No se pudo guardar la valoración");
+      } catch {
+        toast.error("No se pudo guardar la valoración");
+      }
     }, 450);
-    return () => window.clearTimeout(timeout);
-  }, [data.tacticalFit, data.availability, data.adaptationRisk, player.id]);
+  }
+
+  // Al desmontar se cancela el guardado pendiente.
+  useEffect(() => () => window.clearTimeout(saveTimer.current), []);
 
   const score = match ?? 0;
   return <div className="flex flex-col gap-4"><Card>

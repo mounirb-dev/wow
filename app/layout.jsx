@@ -3,6 +3,7 @@ import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import MotionProvider from "@/components/MotionProvider.jsx";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -18,7 +19,7 @@ export default function RootLayout({ children }) {
     <html lang="es" className={cn("font-sans", geist.variable)} suppressHydrationWarning>
       <head><script dangerouslySetInnerHTML={{ __html: themeScript }} /></head>
       <body>
-        <TooltipProvider delayDuration={150}>{children}</TooltipProvider>
+        <MotionProvider><TooltipProvider delayDuration={150}>{children}</TooltipProvider></MotionProvider>
         <Toaster />
       </body>
     </html>
