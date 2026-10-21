@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.gitignore
+.env*
+.playwright-mcp
+ui-folder-audit.png
+appwrite
+coverage
+*.log
+Dockerfile*
+README.md
