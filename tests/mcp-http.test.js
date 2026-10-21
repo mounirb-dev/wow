@@ -38,7 +38,7 @@ describe("endpoint /mcp", () => {
     const init = await (await handleMcpRequest(rpc(token, "initialize", { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "t", version: "1" } }), deps)).json();
     expect(init.result.serverInfo.name).toBe("agentsolver");
     const list = await (await handleMcpRequest(rpc(token, "tools/list", {}, 2), deps)).json();
-    expect(list.result.tools.map((t) => t.name).sort()).toEqual(["list_clients", "negotiation_brief", "portfolio_summary", "valuation"]);
+    expect(list.result.tools.map((t) => t.name).sort()).toEqual(["decision_matrix", "lineup_suggestion", "list_clients", "negotiation_brief", "player_report", "portfolio_summary", "squad_alerts", "squad_balance", "valuation"]);
     expect(list.result.tools.every((t) => t.annotations.readOnlyHint)).toBe(true);
   });
 
@@ -59,6 +59,26 @@ describe("endpoint /mcp", () => {
     expect(JSON.parse(brief.result.content[0].text).club).toBe("Real Madrid");
     const summary = await (await handleMcpRequest(rpc(token, "tools/call", { name: "portfolio_summary", arguments: {} }, 6), deps)).json();
     expect(JSON.parse(summary.result.content[0].text)).toMatchObject({ aum: 100, count: 1 });
+  });
+  test("herramientas del cuerpo técnico: alertas, equilibrio, once, matriz e informe", async () => {
+    const token = login();
+    const call = async (name, args = {}, id = 20) => JSON.parse((await (await handleMcpRequest(rpc(token, "tools/call", { name, arguments: args }, id), deps)).json()).result.content[0].text);
+    expect((await call("squad_alerts")).some((alert) => alert.title.startsWith("Poca profundidad"))).toBe(true);
+    expect((await call("squad_balance")).total).toBe(1);
+    const lineup = await call("lineup_suggestion", { formation: "4-4-2" });
+    expect(lineup.formation).toBe("4-4-2");
+    expect(lineup.starters).toHaveLength(11);
+    expect(lineup.starters.filter((slot) => slot.player === "Bukayo Saka")).toHaveLength(1);
+    const matrix = await call("decision_matrix", { weights: { contract: 5 }, line: "FW" });
+    expect(matrix.weights.contract).toBe(5);
+    expect(matrix.ranking[0].name).toBe("Bukayo Saka");
+    const report = await call("player_report", { playerId: "saka" });
+    expect(report.decision.label).toBe("Sin datos suficientes");
+    expect(report.missing).toContain("valoración técnica del staff");
+  });
+  test("formación inexistente se rechaza por esquema", async () => {
+    const res = await (await handleMcpRequest(rpc(login(), "tools/call", { name: "lineup_suggestion", arguments: { formation: "9-9-9" } }, 21), deps)).json();
+    expect(res.error || res.result?.isError).toBeTruthy();
   });
   test("argumentos inválidos se rechazan por esquema", async () => {
     const res = await (await handleMcpRequest(rpc(login(), "tools/call", { name: "valuation", arguments: { playerId: 7 } }, 7), deps)).json();

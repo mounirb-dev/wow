@@ -45,6 +45,7 @@ Una consulta sin filtro de workspace es una fuga de datos entre clientes.
 | `db/migrations/` | Esquema de Appwrite, versionado y numerado. |
 | `scripts/` | Utilidades de entorno (`migrate`, `bootstrap`, `sync-news`…). |
 | `app/mcp`, `app/api/mcp/oauth`, `app/.well-known` | Endpoint MCP remoto y su servidor OAuth (ver "MCP"). |
+| `lib/coach.js`, `components/coach` | Herramientas del cuerpo técnico: alertas, equilibrio, alineación, matriz de decisión e informe de jugador (ver "Cuerpo técnico"). |
 | `lib/mcp-*.js` | Núcleo OAuth (tokens firmados, PKCE), herramientas MCP y manejador HTTP. |
 | `tests/` | `bun test`: fórmulas, utilidades, OAuth, endpoint MCP y puerta de calidad. |
 | `scripts/verify.mjs` | Puerta de calidad previa al push (ver "Calidad"). |
@@ -77,6 +78,10 @@ Ver `docs/production-appwrite.md`. Las migraciones no se ejecutan en el build de
 ## MCP
 
 `/mcp` expone las herramientas de solo lectura por HTTP. La autenticación es OAuth 2.1 + PKCE con registro dinámico de clientes; clientes, códigos y tokens son JSON firmado con HMAC (`lib/mcp-oauth.js`), sin estado en base de datos. En cada llamada se resuelve de nuevo el workspace del usuario (`resolveWorkspaceContext`), así que la regla multi-tenant se mantiene: el token solo identifica al usuario, nunca da acceso a un workspace concreto. El flujo completo está probado en `tests/mcp-*.test.js`.
+
+## Cuerpo técnico
+
+`lib/coach.js` es lógica pura (testeada en `tests/coach.test.js`) que usan la página `/coach`, el informe de la ficha de jugador y las herramientas MCP. Regla de oro: **no se inventa ningún dato**. Si falta un dato (valoración del staff, minutos…) ese criterio se excluye, el resto se re-normaliza y se informa de la `coverage`. Los por-90 solo se calculan con 450 minutos o más. La recomendación de renovar/no renovar sale de reglas visibles (`DECISION_RULES`), pensadas para priorizar el trabajo del staff y no como decisión automática. La alineación y la matriz se calculan en el cliente y no se guardan.
 
 ## Calidad
 

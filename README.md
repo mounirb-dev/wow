@@ -4,6 +4,7 @@ Workspace para gestionar una cartera de fútbol, negociaciones, documentos y cri
 
 - **Cartera:** cada jugador con valor, evolución, vencimiento de contrato y *palanca* (0-100: cuánta fuerza tienes para negociar ahora).
 - **Simulador de negociación:** eliges club y salario; ves probabilidad de cierre y comisión esperada, y calculas la petición óptima.
+- **Cuerpo técnico (`/coach`):** alertas priorizadas, equilibrio de plantilla por líneas, constructor de alineación y matriz de decisión con pesos propios. Nunca inventa datos: lo que falta se marca y baja la cobertura.
 - **MCP:** las mismas herramientas disponibles para Claude Desktop u otros clientes MCP.
 - **Backend:** Appwrite sobre **PostgreSQL**, con migraciones versionadas, Appwrite Storage y login con Google/Apple.
 
@@ -60,7 +61,7 @@ Para Apple añade también `APPLE_SERVICE_ID`, `APPLE_KEY_ID`, `APPLE_TEAM_ID` y
 
 ## Servidor MCP (remoto, con OAuth)
 
-El MCP es un endpoint HTTP en **`/mcp`** (Streamable HTTP, sin estado) protegido con OAuth 2.1 + PKCE. Cada usuario autoriza el acceso con su cuenta y solo ve los datos de su workspace. Herramientas (solo lectura): `list_clients`, `portfolio_summary`, `valuation`, `negotiation_brief`.
+El MCP es un endpoint HTTP en **`/mcp`** (Streamable HTTP, sin estado) protegido con OAuth 2.1 + PKCE. Cada usuario autoriza el acceso con su cuenta y solo ve los datos de su workspace. Herramientas (solo lectura): `list_clients`, `portfolio_summary`, `valuation`, `negotiation_brief` y, para el cuerpo técnico, `squad_alerts`, `squad_balance`, `lineup_suggestion`, `decision_matrix` y `player_report`.
 
 **Conectar Claude** (web, escritorio o móvil): Ajustes → Conectores → *Añadir conector personalizado* → URL `https://TU-DOMINIO/mcp`. Claude descubre el OAuth solo (`/.well-known/oauth-*`), te lleva a `/mcp/oauth` para iniciar sesión y pulsar *Autorizar acceso*.
 
