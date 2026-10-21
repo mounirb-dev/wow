@@ -6,14 +6,18 @@ import { Toaster } from "@/components/ui/sonner";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
+// Applies the saved theme before first paint so dark mode never flashes light on load.
+const themeScript = `try{var t=JSON.parse(localStorage.getItem("agentsolver-ui")).state.theme;document.documentElement.classList.toggle("dark",t==="dark")}catch(e){}`;
+
 export const metadata = { title: "AgentSolver", description: "Tu cartera de jugadores, valorada como activos." };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="es" className={cn("font-sans", geist.variable)}>
+    <html lang="es" className={cn("font-sans", geist.variable)} suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: themeScript }} /></head>
       <body>
         <TooltipProvider delayDuration={150}>{children}</TooltipProvider>
-        <Toaster theme="light" />
+        <Toaster />
       </body>
     </html>
   );

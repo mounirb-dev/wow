@@ -1,17 +1,45 @@
 import Link from "next/link";
-import { ArrowUpRight, CheckCircle2, ChevronDown } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { ArrowUpRight, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import PageHeader from "@/components/PageHeader.jsx";
-import { loadPlayers } from "@/lib/data.js";
-import { fmtM, monthsLeft } from "@/lib/tools.js";
 import WorkspaceShell from "@/components/WorkspaceShell.jsx";
+import { loadPlayers } from "@/lib/data.js";
+import { requireUser } from "@/lib/session.js";
+import { fmtM, monthsLeft } from "@/lib/tools.js";
 
 export const metadata = { title: "AgentSolver · Jugadores" };
 export const dynamic = "force-dynamic";
 
+const contractEnd = (player) => new Date(player.contractEnd).toLocaleDateString("es-ES", { month: "short", year: "numeric" });
+const Source = ({ player }) => player.sourceUrl
+  ? <a href={player.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"><CheckCircle2 className="size-3.5 text-emerald-600" aria-hidden="true" /> Verificada</a>
+  : <span className="text-xs text-muted-foreground">Fuente pendiente</span>;
+
 export default async function PlayersPage() {
+  await requireUser();
   const players = await loadPlayers();
 
-  return <WorkspaceShell><main className="min-h-screen px-2 py-5"><PageHeader eyebrow="espacio de trabajo / registros" title="Jugadores" description="Todos los jugadores del workspace en una vista operativa." /><Card className="overflow-hidden"><CardHeader className="gap-4 border-b px-4 py-3"><div className="flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-2"><span className="inline-flex h-8 items-center gap-2 rounded-lg border bg-background px-2.5 text-sm font-medium"><span>Todos los jugadores · {players.length}</span><ChevronDown className="size-4 text-muted-foreground" aria-hidden="true" /></span><Badge variant="secondary">Vista guardada</Badge></div><span className="text-xs text-muted-foreground">{players.length} registros</span></div></CardHeader><CardContent className="p-0"><div className="overflow-x-auto"><table className="w-full min-w-[860px] text-sm"><thead className="border-b bg-muted/40 text-left text-xs text-muted-foreground"><tr><th className="w-10 px-4 py-3"><input type="checkbox" aria-label="Seleccionar todos los jugadores" /></th><th className="px-4 py-3 font-medium">Jugador</th><th className="px-4 py-3 font-medium">Club</th><th className="px-4 py-3 font-medium">Posición</th><th className="px-4 py-3 font-medium">Contrato</th><th className="px-4 py-3 font-medium">Valor</th><th className="px-4 py-3 font-medium">Fuente</th><th className="px-4 py-3" /></tr></thead><tbody>{players.map((player) => <tr key={player.id} className="border-b last:border-0 hover:bg-muted/30"><td className="px-4 py-3"><input type="checkbox" aria-label={`Seleccionar a ${player.name}`} /></td><td className="px-4 py-3"><Link href={`/players/${player.id}`} className="group inline-flex items-center gap-2 font-medium hover:underline"><span>{player.name}</span><ArrowUpRight className="size-3.5 text-muted-foreground opacity-0 transition group-hover:opacity-100" /></Link></td><td className="px-4 py-3 text-muted-foreground">{player.club}</td><td className="px-4 py-3 text-muted-foreground">{player.pos} · {player.age}</td><td className="px-4 py-3 tabular-nums"><span>{monthsLeft(player)} meses</span><span className="mt-0.5 block text-xs text-muted-foreground">{new Date(player.contractEnd).toLocaleDateString("es-ES", { month: "short", year: "numeric" })}</span></td><td className="px-4 py-3 font-medium tabular-nums">{fmtM(player.value)}</td><td className="px-4 py-3">{player.sourceUrl ? <a href={player.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"><CheckCircle2 className="size-3.5 text-emerald-600" /> Verificada</a> : <span className="text-xs text-muted-foreground">Pendiente</span>}</td><td className="px-4 py-3 text-right"><Link href={`/players/${player.id}`} className="text-xs text-muted-foreground hover:text-foreground">Abrir</Link></td></tr>)}</tbody></table></div><div className="flex items-center justify-end border-t px-4 py-3 text-xs text-muted-foreground"><span>Contar todo · {players.length}</span></div></CardContent></Card></main></WorkspaceShell>;
+  return <WorkspaceShell><main className="min-h-screen px-2 py-5">
+    <PageHeader eyebrow="espacio de trabajo / registros" title="Jugadores" description="Todos los jugadores del workspace en una vista operativa." />
+    <Card className="overflow-hidden">
+      <CardHeader className="border-b px-4 py-3"><p className="text-sm font-medium">Todos los jugadores · {players.length}</p></CardHeader>
+      <CardContent className="p-0">
+        {!players.length && <p className="px-4 py-10 text-center text-sm text-muted-foreground">Todavía no hay jugadores en este workspace.</p>}
+        <ul className="divide-y md:hidden">{players.map((player) => <li key={player.id}><Link href={`/players/${player.id}`} className="flex items-center justify-between gap-3 px-4 py-3 active:bg-muted/50">
+          <span className="min-w-0"><span className="block truncate font-medium">{player.name}</span><span className="block truncate text-xs text-muted-foreground">{player.club} · {player.pos} · {player.age} años</span><span className="mt-1 block text-xs text-muted-foreground">{monthsLeft(player)} meses · {contractEnd(player)}</span></span>
+          <span className="shrink-0 text-right"><span className="block font-medium tabular-nums">{fmtM(player.value)}</span><ArrowUpRight className="ml-auto mt-1 size-4 text-muted-foreground" aria-hidden="true" /></span>
+        </Link></li>)}</ul>
+        {players.length > 0 && <div className="hidden overflow-x-auto md:block"><table className="w-full text-sm">
+          <thead className="border-b bg-muted/40 text-left text-xs text-muted-foreground"><tr><th scope="col" className="px-4 py-3 font-medium">Jugador</th><th scope="col" className="px-4 py-3 font-medium">Club</th><th scope="col" className="px-4 py-3 font-medium">Posición</th><th scope="col" className="px-4 py-3 font-medium">Contrato</th><th scope="col" className="px-4 py-3 font-medium">Valor</th><th scope="col" className="px-4 py-3 font-medium">Fuente</th></tr></thead>
+          <tbody>{players.map((player) => <tr key={player.id} className="border-b last:border-0 hover:bg-muted/30">
+            <td className="px-4 py-3"><Link href={`/players/${player.id}`} className="group inline-flex items-center gap-2 font-medium hover:underline"><span>{player.name}</span><ArrowUpRight className="size-3.5 text-muted-foreground opacity-0 transition group-hover:opacity-100" aria-hidden="true" /></Link></td>
+            <td className="px-4 py-3 text-muted-foreground">{player.club}</td>
+            <td className="px-4 py-3 text-muted-foreground">{player.pos} · {player.age}</td>
+            <td className="px-4 py-3 tabular-nums"><span>{monthsLeft(player)} meses</span><span className="mt-0.5 block text-xs text-muted-foreground">{contractEnd(player)}</span></td>
+            <td className="px-4 py-3 font-medium tabular-nums">{fmtM(player.value)}</td>
+            <td className="px-4 py-3"><Source player={player} /></td>
+          </tr>)}</tbody></table></div>}
+      </CardContent>
+    </Card>
+  </main></WorkspaceShell>;
 }

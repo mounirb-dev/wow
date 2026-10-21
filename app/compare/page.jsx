@@ -3,6 +3,7 @@ import { GitCompare } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import CompareExportButton from "@/components/CompareExportButton.jsx";
 import PageHeader from "@/components/PageHeader.jsx";
+import { requireUser } from "@/lib/session.js";
 import WorkspaceShell from "@/components/WorkspaceShell.jsx";
 import { loadPlayers } from "@/lib/data.js";
 import { fmtM, leverage, monthsLeft } from "@/lib/tools.js";
@@ -11,6 +12,7 @@ export const metadata = { title: "AgentSolver · Comparador" };
 export const dynamic = "force-dynamic";
 
 export default async function ComparePage() {
+  await requireUser();
   const players = await loadPlayers();
   const selected = players.slice(0, 3);
   const rows = [["Edad", (p) => `${p.age} años`], ["Posición", (p) => p.pos], ["Valor", (p) => fmtM(p.value)], ["Contrato", (p) => `${monthsLeft(p)} meses`], ["Palanca", (p) => leverage(p)], ["Disponibilidad", () => "Pendiente"], ["Encaje táctico", () => "Pendiente"]];

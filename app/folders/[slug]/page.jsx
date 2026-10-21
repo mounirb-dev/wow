@@ -3,6 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import PageHeader from "@/components/PageHeader.jsx";
+import { requireUser } from "@/lib/session.js";
 import WorkspaceShell from "@/components/WorkspaceShell.jsx";
 import FolderFiles from "@/components/FolderFiles.jsx";
 import FolderManager from "@/components/FolderManager.jsx";
@@ -20,6 +21,7 @@ const folders = {
 };
 
 export default async function FolderPage({ params, searchParams }) {
+  await requireUser();
   const { slug } = await params;
   const query = await searchParams;
   const context = await getWorkspaceContext();

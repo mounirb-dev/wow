@@ -10,14 +10,13 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import Sparkline from "./Sparkline.jsx";
 import ContractClock from "./ContractClock.jsx";
 import Hint from "./Hint.jsx";
 import ActivityChart from "./ActivityChart.jsx";
 import FolderCard from "./FolderCard.jsx";
 import PlayerFolder from "./PlayerFolder.jsx";
 import WorkspaceShell from "./WorkspaceShell.jsx";
-import { change12m, curve, fmtM, history, leverage, monthsLeft, negotiate, portfolio } from "@/lib/tools.js";
+import { curve, fmtM, leverage, monthsLeft, negotiate, portfolio } from "@/lib/tools.js";
 
 function useCountUp(target, ms = 900) {
   const [v, setV] = useState(0);
@@ -37,7 +36,7 @@ export default function Terminal({ players, user }) {
   const [sel, setSel] = useState(null);
   const [filter, setFilter] = useState("todos");
 
-  const rows = useMemo(() => players.map((p) => ({ ...p, hist: history(p), chg: change12m(p), lev: leverage(p), months: monthsLeft(p) })), [players]);
+  const rows = useMemo(() => players.map((p) => ({ ...p, lev: leverage(p), months: monthsLeft(p) })), [players]);
   const sorted = useMemo(() => [...rows].sort((a, b) => b.lev - a.lev), [rows]);
   const visible = sorted.filter((r) => filter === "todos" || (filter === "palanca" && r.lev >= 70) || (filter === "vencen" && r.months <= 12));
   const pf = useMemo(() => portfolio(players), [players]);
@@ -147,12 +146,10 @@ export default function Terminal({ players, user }) {
                       </Tooltip>
                     </div>
                   </CardHeader>
-            <CardContent className="flex items-end justify-between px-4">
+            <CardContent className="px-4">
                     <div>
                       <div className="text-2xl font-semibold tabular-nums">{fmtM(r.value)}</div>
-                {r.chg === null ? <div className="text-xs text-muted-foreground">Sin historial de rendimiento</div> : <div className={`text-xs ${r.chg >= 0 ? "text-[#346538]" : "text-[#9f2f2d]"}`}>{r.chg >= 0 ? "▲" : "▼"} {Math.abs(r.chg).toFixed(1)}% en 12 meses</div>}
                     </div>
-                    {r.hist.length > 1 && <Sparkline values={r.hist} up={r.chg >= 0} id={r.id} />}
                   </CardContent>
                 </Card>
               ))}

@@ -1,20 +1,27 @@
 import { NextResponse } from "next/server";
+import { TablesDB } from "node-appwrite";
+import { adminClient, listAll } from "@/lib/appwrite.js";
 import { revalidateNewsCache } from "@/lib/cache-tags.js";
 import { loadPlayers } from "@/lib/data.js";
-import { syncPlayerNews } from "@/lib/news-sync.js";
+import { mapLimit, syncPlayerNews } from "@/lib/news-sync.js";
 import { getUser } from "@/lib/session.js";
+
+export const maxDuration = 60;
 
 export async function POST(request) {
   const expected = process.env.NEWS_SYNC_SECRET;
   const provided = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-  const authenticated = await getUser();
-  if ((!expected || provided !== expected) && !authenticated) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const isCron = Boolean(expected) && provided === expected;
+  if (!isCron && !(await getUser())) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const results = [];
-  for (const player of await loadPlayers()) {
-    try { results.push({ playerId: player.id, ...(await syncPlayerNews(player)) }); }
-    catch (error) { results.push({ playerId: player.id, error: error.message }); }
-  }
+  // A scheduled call has no user session, so it refreshes every workspace; a signed-in call only its own.
+  const players = isCron
+    ? (await listAll(new TablesDB(adminClient()), "players")).map((row) => ({ id: row.$id, name: row.name, club: row.club }))
+    : await loadPlayers();
+  const results = await mapLimit(players, 4, async (player) => {
+    try { return { playerId: player.id, ...(await syncPlayerNews(player)) }; }
+    catch (error) { return { playerId: player.id, error: error.message }; }
+  });
   revalidateNewsCache(results.map((result) => result.playerId));
   return NextResponse.json({ updatedAt: new Date().toISOString(), results });
 }
