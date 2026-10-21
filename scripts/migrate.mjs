@@ -1,15 +1,16 @@
 // Tiny migration runner for Appwrite TablesDB (PostgreSQL-backed).
 // Applies db/migrations/*.mjs in order; applied names are stored in the `migrations` table.
-import { Client, TablesDB, ID } from "node-appwrite";
+import { Client, Storage, TablesDB, ID } from "node-appwrite";
 import { readdirSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 
-const { APPWRITE_ENDPOINT, APPWRITE_PROJECT_ID, APPWRITE_API_KEY, APPWRITE_DATABASE_ID = "agentsolver" } = process.env;
+const { APPWRITE_ENDPOINT, APPWRITE_PROJECT_ID, APPWRITE_API_KEY, APPWRITE_DATABASE_ID = "agentsolver", APPWRITE_STORAGE_BUCKET_ID = "documents" } = process.env;
 if (!APPWRITE_API_KEY) throw new Error("Missing APPWRITE_* env (run `bun run appwrite:bootstrap`, then use bun --env-file=.env.local).");
 
 const client = new Client().setEndpoint(APPWRITE_ENDPOINT).setProject(APPWRITE_PROJECT_ID).setKey(APPWRITE_API_KEY);
 const db = new TablesDB(client);
+const storage = new Storage(client);
 const DB = APPWRITE_DATABASE_ID;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const exists = async (fn) => { try { await fn(); return true; } catch (e) { if (e.code === 404) return false; throw e; } };
@@ -26,7 +27,7 @@ async function waitColumns(table) {
 }
 
 const ctx = {
-  db, DB, ID, waitColumns,
+  db, storage, DB, BUCKET_ID: APPWRITE_STORAGE_BUCKET_ID, ID, waitColumns,
   async ensureTable(id, name) {
     if (!(await exists(() => db.getTable(DB, id)))) await db.createTable(DB, id, name, []);
   },

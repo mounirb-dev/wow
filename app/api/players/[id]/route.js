@@ -1,15 +1,20 @@
 import { NextResponse } from "next/server";
-import { TablesDB } from "node-appwrite";
-import { adminClient, DB } from "@/lib/appwrite.js";
+import { DB } from "@/lib/appwrite.js";
 import { revalidatePlayersCache } from "@/lib/cache-tags.js";
-import { getUser } from "@/lib/session.js";
+import { canEdit, getWorkspaceContext } from "@/lib/workspace.js";
 
 const integerFields = new Set(["minutes", "goals", "assists", "progressiveActions", "tacticalFit", "availability", "adaptationRisk"]);
 const stringFields = new Set(["role", "staffNotes"]);
 
 export async function PATCH(request, { params }) {
-  if (!await getUser()) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const context = await getWorkspaceContext();
+  if (!context) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  if (!canEdit(context.member)) return NextResponse.json({ error: "Tu rol solo permite consultar" }, { status: 403 });
   const { id } = await params;
+  let player;
+  try { player = await context.db.getRow(DB, "players", id); }
+  catch (error) { if (error.code === 404) return NextResponse.json({ error: "Jugador no encontrado" }, { status: 404 }); throw error; }
+  if (player.workspaceId !== context.workspace.$id) return NextResponse.json({ error: "Jugador no encontrado" }, { status: 404 });
   const body = await request.json();
   const data = {};
   for (const [field, value] of Object.entries(body)) {
@@ -20,7 +25,7 @@ export async function PATCH(request, { params }) {
     if (stringFields.has(field)) data[field] = String(value ?? "").trim() || null;
   }
   if (!Object.keys(data).length) return NextResponse.json({ error: "Sin cambios válidos" }, { status: 400 });
-  const row = await new TablesDB(adminClient()).updateRow(DB, "players", id, data);
+  const row = await context.db.updateRow(DB, "players", id, data);
   revalidatePlayersCache();
   return NextResponse.json({ player: row });
 }

@@ -20,6 +20,7 @@ export async function DELETE(request, { params }) {
   if (!canManage(context.member)) return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   const { id } = await params;
   const member = await context.db.getRow(DB, "workspace_members", id);
+  if (member.workspaceId !== context.workspace.$id) return NextResponse.json({ error: "Miembro no encontrado" }, { status: 404 });
   if (member.role === "owner") return NextResponse.json({ error: "El propietario no puede eliminarse" }, { status: 400 });
   await context.db.deleteRow(DB, "workspace_members", id);
   return NextResponse.json({ ok: true });

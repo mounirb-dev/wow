@@ -44,7 +44,7 @@ export default function Terminal({ players, user }) {
   const aum = useCountUp(pf.aum);
   const pipeline = useCountUp(pf.pipeline);
   const player = rows.find((r) => r.id === sel) ?? sorted[0];
-  if (!players.length) return <div className="min-h-screen"><WorkspaceShell><main className="space-y-6 py-10"><header><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">cartera</p><h1 className="mt-2 text-4xl font-semibold tracking-tight">Aún no hay jugadores</h1><p className="mt-2 max-w-xl text-sm text-muted-foreground">La base de datos está conectada. Importa un perfil con una fuente para empezar.</p></header><Card><CardContent className="flex flex-wrap items-center justify-between gap-4 p-6"><div><p className="font-medium">Sin registros</p><p className="mt-1 text-sm text-muted-foreground">No se han añadido datos de prueba.</p></div><Button asChild><Link href="/players">Abrir jugadores</Link></Button></CardContent></Card></main></WorkspaceShell></div>;
+  if (!players.length) return <div className="min-h-screen"><WorkspaceShell><main className="space-y-6 py-10"><header><p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">cartera</p><h1 className="mt-2 text-4xl font-semibold tracking-tight">Aún no hay jugadores</h1><p className="mt-2 max-w-xl text-sm text-muted-foreground">La base de datos está conectada. Importa un perfil con una fuente para empezar.</p></header><Card><CardContent className="flex flex-wrap items-center justify-between gap-4 p-6"><div><p className="font-medium">Sin registros</p><p className="mt-1 text-sm text-muted-foreground">Todavía no hay jugadores en este workspace.</p></div><Button asChild><Link href="/players">Abrir jugadores</Link></Button></CardContent></Card></main></WorkspaceShell></div>;
   const top = sorted[0];
   const topSuitor = [...top.suitors].sort((a, b) => b.need - a.need)[0];
   const topBest = topSuitor ? curve(top, topSuitor).best : null;
@@ -147,12 +147,12 @@ export default function Terminal({ players, user }) {
                       </Tooltip>
                     </div>
                   </CardHeader>
-                  <CardContent className="flex items-end justify-between px-4">
+            <CardContent className="flex items-end justify-between px-4">
                     <div>
                       <div className="text-2xl font-semibold tabular-nums">{fmtM(r.value)}</div>
-                      <div className={`text-xs ${r.chg >= 0 ? "text-[#346538]" : "text-[#9f2f2d]"}`}>{r.chg >= 0 ? "▲" : "▼"} {Math.abs(r.chg).toFixed(1)}% en 12 meses</div>
+                {r.chg === null ? <div className="text-xs text-muted-foreground">Sin historial de rendimiento</div> : <div className={`text-xs ${r.chg >= 0 ? "text-[#346538]" : "text-[#9f2f2d]"}`}>{r.chg >= 0 ? "▲" : "▼"} {Math.abs(r.chg).toFixed(1)}% en 12 meses</div>}
                     </div>
-                    <Sparkline values={r.hist} up={r.chg >= 0} id={r.id} />
+                    {r.hist.length > 1 && <Sparkline values={r.hist} up={r.chg >= 0} id={r.id} />}
                   </CardContent>
                 </Card>
               ))}

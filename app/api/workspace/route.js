@@ -5,7 +5,7 @@ import { canManage, getWorkspaceContext } from "@/lib/workspace.js";
 export async function GET() {
   const context = await getWorkspaceContext();
   if (!context) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  return NextResponse.json({ workspace: context.workspace, member: context.member });
+  return NextResponse.json({ workspace: context.workspace, member: context.member, iconUrl: context.workspace.iconFileId ? `/api/workspace/icon?v=${context.workspace.iconFileId}` : null });
 }
 
 export async function PATCH(request) {

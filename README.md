@@ -1,13 +1,13 @@
 # AgentSolver · Terminal del agente
 
-Demo para el reto "de la página en blanco al wow": la cartera de un agente de fútbol vista como una cartera de inversión.
+Workspace para gestionar una cartera de fútbol, negociaciones, documentos y criterio del staff.
 
 - **Cartera:** cada jugador con valor, evolución, vencimiento de contrato y *palanca* (0-100: cuánta fuerza tienes para negociar ahora).
 - **Simulador de negociación:** eliges club y salario; ves probabilidad de cierre y comisión esperada, y calculas la petición óptima.
 - **MCP:** las mismas herramientas disponibles para Claude Desktop u otros clientes MCP.
-- **Backend:** Appwrite autoalojado sobre **PostgreSQL**, con migraciones versionadas y login con Google.
+- **Backend:** Appwrite sobre **PostgreSQL**, con migraciones versionadas, Appwrite Storage y login con Google/Apple.
 
-> Todos los jugadores, clubes y cifras son **ficticios**. La probabilidad de cierre y la comisión (5 % × 3 años) son un modelo ilustrativo, no asesoramiento.
+Los perfiles, noticias, valoraciones, carpetas y archivos se leen de Appwrite. La aplicación no crea registros de prueba automáticamente.
 
 Stack: Next.js (App Router, JSX) · Bun · Tailwind CSS 4 · shadcn/ui · Appwrite (`node-appwrite`).
 
@@ -27,18 +27,17 @@ bun run appwrite:install        # espera ~1 min a que los contenedores estén "h
 # 2. Crea el admin, el proyecto y la API key de Appwrite → escribe .env.local
 bun run appwrite:bootstrap
 
-# 3. Aplica las migraciones (tablas, índices, datos de ejemplo)
+# 3. Aplica las migraciones (tablas, índices y Storage)
 bun run db:migrate
 
-# 4. Crea el usuario demo y registra localhost como plataforma web
-bun run appwrite:demo-user
+# 4. Registra localhost como plataforma web y configura OAuth si procede
 bun run appwrite:configure
 
 # 5. Arranca la app
 bun run dev
 ```
 
-Abre <http://localhost:3000> y pulsa **Entrar como agente demo**.
+Abre <http://localhost:3000> y entra con una cuenta real de Appwrite.
 La consola de Appwrite está en <http://localhost:8080> (`admin@agentsolver.local` / `AgentSolver#2026!`, solo para desarrollo local).
 
 ## Login con Google y Apple (Appwrite)
@@ -53,7 +52,7 @@ La consola de Appwrite está en <http://localhost:8080> (`admin@agentsolver.loca
    ```
 4. Ejecuta `bun run appwrite:configure` y reinicia `bun run dev`.
 
-Sin estas credenciales el botón de Google devuelve al login con un error; el acceso demo funciona igualmente.
+Sin estas credenciales el botón de Google devuelve al login con un error.
 
 Para Apple añade también `APPLE_SERVICE_ID`, `APPLE_KEY_ID`, `APPLE_TEAM_ID` y `APPLE_P8_FILE` al entorno. Appwrite valida Google/Apple y mantiene sus sesiones; AgentSolver solo guarda la sesión de Appwrite en una cookie HTTP-only.
 
@@ -93,7 +92,6 @@ Herramientas: `list_clients`, `portfolio_summary`, `valuation`, `negotiation_bri
 | `bun run appwrite:up` / `appwrite:down` | Arranca / para el stack ya instalado |
 | `bun run appwrite:bootstrap` | Admin + proyecto + API key → `.env.local` |
 | `bun run appwrite:configure` | Plataforma web y Google OAuth (si hay credenciales) |
-| `bun run appwrite:demo-user` | Crea el usuario de la demo |
 | `bun run db:migrate` | Aplica migraciones pendientes (idempotente) |
 | `bun run mcp` | Servidor MCP TypeScript por stdio |
 
@@ -102,9 +100,9 @@ Herramientas: `list_clients`, `portfolio_summary`, `valuation`, `negotiation_bri
 ```
 app/            páginas, login y rutas API (auth)
 components/     Terminal, simulador y shadcn en components/ui
-lib/            datos, cálculos compartidos (tools.js), cliente Appwrite, sesión
+lib/            acceso a Appwrite, cálculos derivados, caché y sesión
 mcp/server.ts   servidor MCP TypeScript
-db/migrations/    migraciones (001 esquema, 002 índices, 003 datos)
+db/migrations/    migraciones versionadas de Appwrite (incluye Storage)
 scripts/        instalación, bootstrap, configuración y migrador
 ```
 

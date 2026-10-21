@@ -59,6 +59,15 @@ export default function NegotiationKanban({ players, staffData, initialPlayerId 
     if (!response.ok) setSignals((current) => ({ ...current, [playerId]: previous }));
   }
 
+  function applySignal(playerId, signal) {
+    setSignals((current) => ({ ...current, [playerId]: signal }));
+    setColumns((current) => current
+      .map((column) => ({ ...column, tasks: column.tasks.filter((task) => task.id !== playerId) }))
+      .map((column) => column.id === signal.interest
+        ? { ...column, tasks: [...column.tasks, toTask(players.find((player) => player.id === playerId))] }
+        : column));
+  }
+
   const handleDragEnd = ({ active, over }) => {
     const current = columns;
     const activeColumn = findColumn(active.id, current);
@@ -86,6 +95,6 @@ export default function NegotiationKanban({ players, staffData, initialPlayerId 
         </DragOverlay>
       </DndContext>
     </Card>
-    {selected && <section className="mt-4 rounded-xl border bg-card p-4"><div className="mb-4 flex items-start justify-between gap-3"><div><p className="text-xs uppercase tracking-wider text-muted-foreground">Detalle de trabajo</p><h2 className="mt-1 text-base font-medium">{selected.name}</h2></div><button type="button" onClick={() => setSelectedId(null)} className="text-xs text-muted-foreground hover:text-foreground">Cerrar</button></div><StaffInterestEditor player={selected} initialSignal={signals[selected.id]} initialTargets={staffData[selected.id]?.targets || []} onSignalSaved={(signal) => setSignals((current) => ({ ...current, [selected.id]: signal }))} /></section>}
+    {selected && <section className="mt-4 rounded-xl border bg-card p-4"><div className="mb-4 flex items-start justify-between gap-3"><div><p className="text-xs uppercase tracking-wider text-muted-foreground">Detalle de trabajo</p><h2 className="mt-1 text-base font-medium">{selected.name}</h2></div><button type="button" onClick={() => setSelectedId(null)} className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground">Cerrar</button></div><StaffInterestEditor player={selected} initialSignal={signals[selected.id]} initialTargets={staffData[selected.id]?.targets || []} onSignalSaved={(signal) => applySignal(selected.id, signal)} /></section>}
   </>;
 }
