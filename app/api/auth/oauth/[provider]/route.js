@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { Account } from "node-appwrite";
-import { adminClient, APP_URL } from "@/lib/appwrite.js";
+import { adminClient } from "@/lib/appwrite.js";
 
 const nextPath = (value) => {
   if (!value || !value.startsWith("/") || value.startsWith("//")) return "/";
@@ -12,12 +12,13 @@ export async function GET(req, { params }) {
   const { provider } = await params;
   if (!["apple", "google"].includes(provider)) return new NextResponse("Provider not supported", { status: 404 });
   const next = nextPath(new URL(req.url).searchParams.get("next"));
+  const appUrl = new URL(req.url).origin;
   const state = randomUUID();
   try {
     const url = await new Account(adminClient()).createOAuth2Token({
       provider,
-      success: `${APP_URL}/api/auth/callback?next=${encodeURIComponent(next)}`,
-      failure: `${APP_URL}/login?error=oauth`,
+      success: `${appUrl}/api/auth/callback?next=${encodeURIComponent(next)}`,
+      failure: `${appUrl}/login?error=oauth`,
       state,
     });
     const response = NextResponse.redirect(url);
@@ -28,6 +29,6 @@ export async function GET(req, { params }) {
     // Appwrite answers 412 when the provider has no credentials yet; the SDK surfaces it as a vague message.
     const msg = `${provider === "apple" ? "Apple" : "Google"} no está configurado todavía en Appwrite.`;
     console.error("oauth start failed:", e.message);
-    return NextResponse.redirect(`${APP_URL}/login?error=${encodeURIComponent(msg)}`);
+    return NextResponse.redirect(`${appUrl}/login?error=${encodeURIComponent(msg)}`);
   }
 }
