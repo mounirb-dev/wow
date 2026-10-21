@@ -1,8 +1,12 @@
 export async function up({ db, DB }) {
-  await db.createIndex(DB, "players", "idx_workspace", "key", ["workspaceId"]);
-  await db.createIndex(DB, "documents", "idx_workspace_folder", "key", ["workspaceId", "folderId"]);
-  await db.createIndex(DB, "workspace_members", "idx_user", "key", ["userId"]);
-  await db.createIndex(DB, "workspace_members", "idx_email_status", "key", ["email", "status"]);
-  await db.createIndex(DB, "player_staff_signals", "idx_workspace_player", "key", ["workspaceId", "playerId"]);
-  await db.createIndex(DB, "transfer_targets", "idx_workspace_player", "key", ["workspaceId", "playerId"]);
+  const ensureIndex = async (table, key, columns) => {
+    const { indexes } = await db.listIndexes(DB, table);
+    if (!indexes.some((index) => index.key === key)) await db.createIndex(DB, table, key, "key", columns);
+  };
+  await ensureIndex("players", "idx_workspace", ["workspaceId"]);
+  await ensureIndex("documents", "idx_workspace_folder", ["workspaceId", "folderId"]);
+  await ensureIndex("workspace_members", "idx_user", ["userId"]);
+  await ensureIndex("workspace_members", "idx_email_status", ["email", "status"]);
+  await ensureIndex("player_staff_signals", "idx_workspace_player", ["workspaceId", "playerId"]);
+  await ensureIndex("transfer_targets", "idx_workspace_player", ["workspaceId", "playerId"]);
 }
