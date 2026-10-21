@@ -56,13 +56,13 @@ export default function Terminal({ players, user }) {
       <WorkspaceShell>
       <header className="flex flex-wrap items-end justify-between gap-6 pb-4 pt-3">
         <div>
-          <div className="mt-2 text-5xl font-semibold tabular-nums tracking-tight sm:text-6xl">{fmtM(aum)}</div>
+          <div className="mt-2 text-4xl font-semibold tabular-nums tracking-tight sm:text-6xl">{fmtM(aum)}</div>
           <p className="mt-1 text-sm text-muted-foreground">
             <Hint tip="Suma del valor de mercado de todos tus jugadores.">Valor de tu cartera</Hint> · {pf.count} jugadores ·{" "}
             <Hint tip="Contratos que vencen en 12 meses o menos: es cuando más fuerza tienes para negociar.">{pf.expiring} en zona de palanca</Hint>
           </p>
         </div>
-        <div className="flex items-end gap-6 rounded-lg border bg-card px-4 py-3">
+        <div className="flex w-full items-end justify-between gap-6 rounded-lg border bg-card px-4 py-3 sm:w-auto">
           <div className="text-right">
             <div className="text-xs text-muted-foreground"><Hint tip="Lo que esperas cobrar en comisiones si negocias a cada jugador con su mejor club y con la petición óptima.">Comisión esperada</Hint></div>
             <div className="text-3xl font-semibold tabular-nums text-[#956400]">{fmtM(pipeline, 2)}</div>
