@@ -1,3 +1,4 @@
+// POST /api/auth/recovery — paso 1 de la recuperación de contraseña (ver lib/recovery.js).
 import { NextResponse } from "next/server";
 import { APP_URL } from "@/lib/appwrite.js";
 import { issueRecoveryChallenge, recoveryCookies } from "@/lib/recovery.js";

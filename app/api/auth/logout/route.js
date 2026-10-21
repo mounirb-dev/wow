@@ -1,3 +1,4 @@
+// POST /api/auth/logout — borra la cookie de sesión y vuelve al login.
 import { NextResponse } from "next/server";
 import { APP_URL } from "@/lib/appwrite.js";
 import { COOKIE } from "@/lib/session.js";

@@ -11,6 +11,8 @@ const themeScript = `try{var t=JSON.parse(localStorage.getItem("agentsolver-ui")
 
 export const metadata = { title: "AgentSolver", description: "Tu cartera de jugadores, valorada como activos." };
 
+// Layout raíz: fuente, proveedor de tooltips y toasts globales. Cada página privada monta su
+// propio <WorkspaceShell> (barra lateral); esta capa no asume sesión.
 export default function RootLayout({ children }) {
   return (
     <html lang="es" className={cn("font-sans", geist.variable)} suppressHydrationWarning>

@@ -11,6 +11,8 @@ Los perfiles, noticias, valoraciones, carpetas y archivos se leen de Appwrite. L
 
 Stack: Next.js (App Router, JSX) · Bun · Tailwind CSS 4 · shadcn/ui · Appwrite (`node-appwrite`).
 
+> Para entender cómo está organizado el código (multi-tenant, flujo de peticiones, convenciones), empieza por [`docs/arquitectura.md`](docs/arquitectura.md).
+
 ## Requisitos
 
 - [Bun](https://bun.sh) 1.3 o superior

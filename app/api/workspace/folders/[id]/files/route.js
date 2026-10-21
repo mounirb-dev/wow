@@ -1,3 +1,6 @@
+// /api/workspace/folders/:id/files — GET lista los archivos; POST sube uno (<=25 MB, editor+).
+// El binario va a Appwrite Storage y los metadatos a la tabla `documents`; si falla el segundo
+// paso se borra el binario para no dejar archivos huérfanos.
 import { NextResponse } from "next/server";
 import { ID, Query } from "node-appwrite";
 import { BUCKET_ID, DB, adminStorage } from "@/lib/appwrite.js";

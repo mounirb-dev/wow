@@ -1,3 +1,6 @@
+// POST /api/auth/login — email + contraseña. Crea la sesión en Appwrite y guarda su secreto en
+// la cookie httpOnly. Responde con redirección 303 (formulario HTML, no fetch); el mensaje de
+// error es genérico a propósito para no revelar si el email existe.
 import { NextResponse } from "next/server";
 import { Account } from "node-appwrite";
 import { adminClient, APP_URL } from "@/lib/appwrite.js";

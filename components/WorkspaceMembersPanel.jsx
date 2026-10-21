@@ -4,6 +4,8 @@ import { useState } from "react";
 import { UserPlus, Users, X } from "lucide-react";
 import { useUiStore } from "@/lib/ui-store.js";
 
+// Lista de miembros e invitaciones del workspace (/api/workspace/members). Invitar y cambiar
+// roles solo funciona para owner/admin; la API lo impone, la UI solo lo refleja.
 export default function WorkspaceMembersPanel() {
   const collapsed = useUiStore((state) => state.sidebarCollapsed);
   const [open, setOpen] = useState(false);

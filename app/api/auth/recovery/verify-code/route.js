@@ -1,3 +1,5 @@
+// POST /api/auth/recovery/verify-code — paso 2: comprueba el código de 6 dígitos contra el
+// hash guardado y marca la cookie `verified` (vale 10 min).
 import { NextResponse } from "next/server";
 import { APP_URL } from "@/lib/appwrite.js";
 import { getRecoveryChallenge, hashRecoverySecret } from "@/lib/recovery.js";

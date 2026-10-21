@@ -1,3 +1,4 @@
+// Migración 008_workspaces_folders: Multi-tenant: workspaces, miembros y carpetas, más el workspace "default" con sus carpetas de sistema.
 export async function up({ db, DB, waitColumns }) {
   await db.createTable(DB, "workspaces", "Workspaces", []);
   await db.createStringColumn(DB, "workspaces", "name", 160, true);

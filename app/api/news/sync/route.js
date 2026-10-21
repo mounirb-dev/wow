@@ -1,3 +1,7 @@
+// POST /api/news/sync — refresca las noticias.
+//  - Con `Authorization: Bearer $NEWS_SYNC_SECRET` (cron): todos los workspaces.
+//  - Con sesión de usuario: solo los jugadores de su workspace.
+// Cualquier otra llamada recibe 401.
 import { NextResponse } from "next/server";
 import { TablesDB } from "node-appwrite";
 import { adminClient, listAll } from "@/lib/appwrite.js";

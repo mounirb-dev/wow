@@ -1,3 +1,5 @@
+// PATCH /api/players/:id — edita los datos del staff de un jugador (minutos, goles, notas…).
+// Solo acepta una lista blanca de campos y valida rangos; cualquier otro campo se ignora.
 import { NextResponse } from "next/server";
 import { DB } from "@/lib/appwrite.js";
 import { revalidatePlayersCache } from "@/lib/cache-tags.js";

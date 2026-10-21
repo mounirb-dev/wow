@@ -1,3 +1,5 @@
+// Migración 012_player_workspace: players.workspaceId (aislamiento por workspace). Rellena los jugadores existentes con "default".
+// Idempotente donde es posible: comprueba si el recurso existe antes de crearlo.
 export async function up({ db, DB, waitColumns }) {
   try {
     await db.getColumn(DB, "players", "workspaceId");

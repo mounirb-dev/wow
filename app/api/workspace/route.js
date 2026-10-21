@@ -1,3 +1,5 @@
+// GET/PATCH /api/workspace — datos del workspace actual (lo usa la barra lateral) y renombrarlo
+// (solo owner/admin).
 import { NextResponse } from "next/server";
 import { DB } from "@/lib/appwrite.js";
 import { canManage, getWorkspaceContext } from "@/lib/workspace.js";

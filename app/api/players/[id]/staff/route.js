@@ -1,3 +1,6 @@
+// PATCH /api/players/:id/staff — guarda la valoración (interesa / no interesa / pendiente) y
+// notas del usuario actual sobre un jugador. Hay UNA fila por (jugador, usuario): el ID de fila
+// es un hash determinista, así que se actualiza si existe y se crea si no (upsert).
 import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { TablesDB } from "node-appwrite";

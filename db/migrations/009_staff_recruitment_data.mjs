@@ -1,3 +1,4 @@
+// Migración 009_staff_recruitment_data: Valoraciones del staff (player_staff_signals) y movimientos propuestos (transfer_targets).
 export async function up({ db, DB, waitColumns }) {
   await db.createTable(DB, "player_staff_signals", "Player staff signals", []);
   await db.createStringColumn(DB, "player_staff_signals", "workspaceId", 64, true);

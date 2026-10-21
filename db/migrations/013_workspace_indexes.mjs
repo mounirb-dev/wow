@@ -1,3 +1,5 @@
+// Migración 013_workspace_indexes: Índices por workspaceId para que las consultas multi-tenant no escaneen la tabla.
+// Idempotente donde es posible: comprueba si el recurso existe antes de crearlo.
 export async function up({ db, DB }) {
   const ensureIndex = async (table, key, columns) => {
     const { indexes } = await db.listIndexes(DB, table);

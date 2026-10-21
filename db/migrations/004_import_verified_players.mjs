@@ -1,3 +1,4 @@
+// Migración 004_import_verified_players: Importa perfiles públicos verificados (solo datos con fuente oficial).
 // Public profile records gathered from official league/club or federation pages.
 // Economic, performance and news fields stay empty until a dedicated source is connected.
 const players = [

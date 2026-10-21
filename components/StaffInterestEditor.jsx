@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { Save, UserRoundPlus } from "lucide-react";
 
+// Panel de un jugador: valoración + notas del usuario (PATCH .../staff) y alta de movimientos de
+// traspaso propuestos (POST /api/transfer-targets). `onSignalSaved` avisa al tablero para que
+// mueva la tarjeta de columna sin recargar.
 export default function StaffInterestEditor({ player, initialSignal = null, initialTargets = [], onSignalSaved }) {
   const [interest, setInterest] = useState(initialSignal?.interest || "pending");
   const [notes, setNotes] = useState(initialSignal?.notes || "");

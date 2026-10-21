@@ -1,3 +1,5 @@
+// Migración 011_workspace_icon: Columna iconFileId en workspaces.
+// Idempotente donde es posible: comprueba si el recurso existe antes de crearlo.
 export async function up({ db, DB, waitColumns }) {
   try {
     await db.getColumn(DB, "workspaces", "iconFileId");

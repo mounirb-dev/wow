@@ -1,3 +1,4 @@
+// Migración 007_player_staff_data: Campos de criterio del staff en players (minutos, encaje táctico, notas…).
 export async function up({ db, DB, waitColumns }) {
   const columns = [
     ["minutes", "integer", [false]], ["goals", "integer", [false]], ["assists", "integer", [false]],

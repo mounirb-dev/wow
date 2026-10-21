@@ -8,6 +8,8 @@ import { Card } from "@/components/ui/card";
 import KanbanColumn from "@/components/shadcn-space/blocks/kanban-application-01/kanban-column";
 import StaffInterestEditor from "./StaffInterestEditor.jsx";
 
+// Tablero de interés del staff: tres columnas (por revisar / me interesa / no interesa).
+// Arrastrar una tarjeta guarda la valoración del usuario vía /api/players/:id/staff.
 const columnConfig = [
   { id: "pending", title: "Por revisar", icon: Circle, iconClassName: "text-muted-foreground" },
   { id: "interested", title: "Me interesa", icon: CircleDot, iconClassName: "text-emerald-600 dark:text-emerald-400" },
@@ -16,6 +18,8 @@ const columnConfig = [
 
 const toTask = (player) => ({ id: player.id, content: player.name, meta: `${player.club} · ${player.pos} · ${player.age} años`, player });
 
+// `staffData` = { [playerId]: { signals, targets } } (ver lib/staff-data.js). La columna inicial
+// de cada jugador sale de la valoración más reciente; sin valoración, "pending".
 export default function NegotiationKanban({ players, staffData, initialPlayerId = null }) {
   const initialSignals = useMemo(() => Object.fromEntries(players.map((player) => [player.id, staffData[player.id]?.signals?.[0] || { interest: "pending", notes: "" }])), [players, staffData]);
   const [signals, setSignals] = useState(initialSignals);

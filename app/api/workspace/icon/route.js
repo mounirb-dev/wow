@@ -1,3 +1,7 @@
+// /api/workspace/icon — icono del workspace en Appwrite Storage.
+//  POST: sube una imagen (<=2 MB, owner/admin) y borra la anterior.
+//  GET: sirve una miniatura 96×96. Va por esta ruta (no URL directa del bucket) para respetar
+//  la pertenencia al workspace.
 import { NextResponse } from "next/server";
 import { ID } from "node-appwrite";
 import { BUCKET_ID, DB, adminStorage } from "@/lib/appwrite.js";

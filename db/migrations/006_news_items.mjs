@@ -1,3 +1,4 @@
+// Migración 006_news_items: Tabla de noticias por jugador, pendientes de revisión del staff.
 export async function up({ db, DB, ensureTable, waitColumns }) {
   await ensureTable("news_items", "News items");
   await db.createStringColumn(DB, "news_items", "playerId", 64, true);

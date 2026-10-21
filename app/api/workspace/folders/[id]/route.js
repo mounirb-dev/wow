@@ -1,3 +1,4 @@
+// PATCH /api/workspace/folders/:id — renombra o mueve una carpeta (editor+); impide moverla dentro de sí misma.
 import { NextResponse } from "next/server";
 import { DB } from "@/lib/appwrite.js";
 import { revalidateFoldersCache } from "@/lib/cache-tags.js";

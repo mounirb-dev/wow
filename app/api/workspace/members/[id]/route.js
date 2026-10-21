@@ -1,3 +1,5 @@
+// PATCH (cambiar rol) / DELETE (expulsar) de un miembro, solo owner/admin. El owner no se puede
+// modificar desde aquí.
 import { NextResponse } from "next/server";
 import { DB } from "@/lib/appwrite.js";
 import { canManage, getWorkspaceContext, normalizeRole } from "@/lib/workspace.js";

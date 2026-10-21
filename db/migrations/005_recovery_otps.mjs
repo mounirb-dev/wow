@@ -1,3 +1,5 @@
+// Migración 005_recovery_otps: Tabla de retos OTP para recuperar contraseña (guarda el hash, nunca el código).
+// Idempotente donde es posible: comprueba si el recurso existe antes de crearlo.
 export async function up({ db, DB, ensureTable, waitColumns }) {
   await ensureTable("recovery_otps", "Recovery OTPs");
   const existing = new Set((await db.listColumns(DB, "recovery_otps")).columns.map((column) => column.key));

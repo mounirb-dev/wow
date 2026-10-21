@@ -20,6 +20,8 @@ const text = (value: unknown): ToolResult => ({
 const error = (message: string, details: Record<string, unknown> = {}): ToolResult =>
   text({ error: message, ...details });
 
+// NOTA: loadPlayers() depende de cookies() de Next y de un usuario con sesión, así que no
+// funciona aquí (proceso stdio, sin petición web). Pendiente decidir de qué workspace leer.
 const findPlayer = async (playerId: string): Promise<Player | undefined> =>
   (await loadPlayers()).find((player) => player.id === playerId);
 

@@ -1,3 +1,4 @@
+// Migración 001_schema: Tablas base: players y suitors (clubes interesados en cada jugador).
 export async function up({ db, DB, ensureTable, waitColumns }) {
   await ensureTable("players", "Players");
   await db.createStringColumn(DB, "players", "name", 120, true);

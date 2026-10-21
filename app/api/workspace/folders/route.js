@@ -1,3 +1,5 @@
+// /api/workspace/folders — GET lista las carpetas del workspace; POST crea una (editor+),
+// opcionalmente dentro de otra (`parentId`, que debe ser del mismo workspace).
 import { NextResponse } from "next/server";
 import { ID, Query } from "node-appwrite";
 import { DB } from "@/lib/appwrite.js";

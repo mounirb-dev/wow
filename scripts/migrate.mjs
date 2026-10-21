@@ -5,6 +5,9 @@ import { readdirSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 
+// Ledger: la tabla `migrations` guarda el nombre de cada migración ya aplicada. Cada archivo de
+// db/migrations exporta `up(ctx)`. OJO: se compara por NOMBRE de archivo; si el ledger remoto
+// usa otros nombres (como producción hoy) intentará reaplicar todo. Ver docs/production-appwrite.md.
 const { APPWRITE_ENDPOINT, APPWRITE_PROJECT_ID, APPWRITE_API_KEY, APPWRITE_DATABASE_ID = "agentsolver", APPWRITE_STORAGE_BUCKET_ID = "documents" } = process.env;
 if (!APPWRITE_API_KEY) throw new Error("Missing APPWRITE_* env (run `bun run appwrite:bootstrap`, then use bun --env-file=.env.local).");
 

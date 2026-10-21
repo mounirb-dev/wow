@@ -4,6 +4,7 @@ import { FileDown } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button.jsx";
 
+// Exporta la tabla del comparador a .xlsx en el navegador (sin pasar por el servidor).
 export default function CompareExportButton({ players, rows }) {
   function exportComparison() {
     const header = ["Criterio", ...players.map((player) => player.name)];

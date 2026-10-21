@@ -1,3 +1,5 @@
+// GET descarga / DELETE borra un archivo. Comprueba que pertenece al workspace Y a esa carpeta
+// antes de tocar el almacenamiento.
 import { NextResponse } from "next/server";
 import { BUCKET_ID, DB, adminStorage } from "@/lib/appwrite.js";
 import { canEdit, getWorkspaceContext } from "@/lib/workspace.js";

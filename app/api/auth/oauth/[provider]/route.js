@@ -1,3 +1,5 @@
+// GET /api/auth/oauth/:provider — inicia el login social. Genera un `state` aleatorio, lo guarda
+// en cookie y redirige al proveedor. Los fallos suelen ser proveedor sin credenciales en Appwrite.
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { Account } from "node-appwrite";

@@ -1,3 +1,4 @@
+// POST /api/auth/recovery/resend — reenvía el código usando el email guardado en cookie.
 import { NextResponse } from "next/server";
 import { APP_URL } from "@/lib/appwrite.js";
 import { issueRecoveryChallenge, recoveryCookies } from "@/lib/recovery.js";

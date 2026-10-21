@@ -1,3 +1,6 @@
+// /api/workspace/members — GET lista miembros; POST invita por email (solo owner/admin).
+// Si el email ya tiene cuenta, entra activo; si no, queda como "invited" y se activa en su
+// primer acceso (ver getWorkspaceContext).
 import { NextResponse } from "next/server";
 import { ID, Query, Users } from "node-appwrite";
 import { adminClient, DB } from "@/lib/appwrite.js";

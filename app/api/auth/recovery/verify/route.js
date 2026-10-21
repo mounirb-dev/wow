@@ -1,3 +1,5 @@
+// POST /api/auth/recovery/verify — paso 3: con el código ya verificado, fija la nueva contraseña
+// (mín. 8 caracteres) y limpia las cookies del reto.
 import { NextResponse } from "next/server";
 import { Account } from "node-appwrite";
 import { adminClient, APP_URL } from "@/lib/appwrite.js";

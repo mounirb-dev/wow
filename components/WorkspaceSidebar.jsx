@@ -10,6 +10,8 @@ import { useUiStore } from "@/lib/ui-store.js";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
+// Navegación principal. Las carpetas de sistema (priority/expiring/followup) están fijas abajo;
+// el resto de carpetas vienen de /api/workspace/folders.
 const navItems = [
   { href: "/players", label: "Jugadores", icon: Users },
   { href: "/negotiations", label: "Negociaciones", icon: Folder },
@@ -20,6 +22,9 @@ const navItems = [
 const folderColors = { priority: "bg-[#9f2f2d]", expiring: "bg-[#956400]", followup: "bg-[#1f6c9f]" };
 const systemNames = { priority: "Prioridad alta", expiring: "Vencen pronto", followup: "En seguimiento" };
 
+// Contenido de la navegación. Se renderiza en dos sitios: la barra fija de escritorio y el
+// drawer móvil (`mobile`), donde nunca está plegada y cierra el drawer al navegar (`onNavigate`).
+// El estado compartido (plegada, nombre, carpetas) vive en useUiStore.
 function SidebarPanel({ mobile = false, onNavigate }) {
   const pathname = usePathname();
   const storeCollapsed = useUiStore((state) => state.sidebarCollapsed);
@@ -106,6 +111,8 @@ function SidebarPanel({ mobile = false, onNavigate }) {
   </div></aside>;
 }
 
+// Escritorio (>= md): panel lateral fijo. Móvil: barra superior con botón de menú que abre el
+// mismo panel en un Sheet. Se cierra solo al cambiar de ruta.
 export default function WorkspaceSidebar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);

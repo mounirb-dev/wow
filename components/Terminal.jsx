@@ -18,6 +18,7 @@ import PlayerFolder from "./PlayerFolder.jsx";
 import WorkspaceShell from "./WorkspaceShell.jsx";
 import { curve, fmtM, leverage, monthsLeft, negotiate, portfolio } from "@/lib/tools.js";
 
+// Anima un número de 0 a `target` con easing cúbico (solo cosmético).
 function useCountUp(target, ms = 900) {
   const [v, setV] = useState(0);
   useEffect(() => {
@@ -32,6 +33,9 @@ function useCountUp(target, ms = 900) {
 const LEVERAGE_TIP = "Palanca (0-100): cuánta fuerza tienes para negociar ahora. Sube si le queda poco contrato, está en racha o cobra menos de lo que vale.";
 const underpaid = (p) => p.fair > 0 && p.salary > 0 ? Math.max(0, Math.round((1 - p.salary / p.fair) * 100)) : null;
 
+// Pantalla principal ("Resumen"): totales de la cartera, lista de jugadores ordenada por palanca
+// y simulador de negociación para el jugador seleccionado. Todo se calcula en cliente con
+// lib/tools.js a partir de `players`, que llega ya cargado desde app/page.jsx.
 export default function Terminal({ players, user }) {
   const [sel, setSel] = useState(null);
   const [filter, setFilter] = useState("todos");

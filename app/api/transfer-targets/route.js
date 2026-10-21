@@ -1,3 +1,5 @@
+// POST /api/transfer-targets — el staff propone un movimiento (fichaje entrante/saliente)
+// para un jugador. Requiere rol editor+ y que el jugador sea del workspace.
 import { NextResponse } from "next/server";
 import { ID, TablesDB } from "node-appwrite";
 import { adminClient, DB } from "@/lib/appwrite.js";
