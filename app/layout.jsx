@@ -10,10 +10,10 @@ export const metadata = { title: "AgentSolver", description: "Tu cartera de juga
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="es" className={cn("dark font-sans", geist.variable)}>
+    <html lang="es" className={cn("font-sans", geist.variable)}>
       <body>
         <TooltipProvider delayDuration={150}>{children}</TooltipProvider>
-        <Toaster theme="dark" />
+        <Toaster theme="light" />
       </body>
     </html>
   );

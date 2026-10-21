@@ -1,0 +1,23 @@
+import { NextResponse } from "next/server";
+import { Account } from "node-appwrite";
+import { adminClient, APP_URL } from "@/lib/appwrite.js";
+import { COOKIE, cookieOptions } from "@/lib/session.js";
+
+export async function POST(req) {
+  const form = await req.formData();
+  const email = String(form.get("email") ?? "").trim();
+  const password = String(form.get("password") ?? "");
+
+  if (!email || !password) {
+    return NextResponse.redirect(`${APP_URL}/login?error=${encodeURIComponent("Introduce tu usuario y contraseña")}`, 303);
+  }
+
+  try {
+    const session = await new Account(adminClient()).createEmailPasswordSession({ email, password });
+    const res = NextResponse.redirect(`${APP_URL}/`, 303);
+    res.cookies.set(COOKIE, session.secret, cookieOptions);
+    return res;
+  } catch {
+    return NextResponse.redirect(`${APP_URL}/login?error=${encodeURIComponent("Usuario o contraseña incorrectos")}`, 303);
+  }
+}

@@ -4,7 +4,6 @@ Demo para el reto "de la página en blanco al wow": la cartera de un agente de f
 
 - **Cartera:** cada jugador con valor, evolución, vencimiento de contrato y *palanca* (0-100: cuánta fuerza tienes para negociar ahora).
 - **Simulador de negociación:** eliges club y salario; ves probabilidad de cierre y comisión esperada, y calculas la petición óptima.
-- **Copiloto (⌘K):** preguntas en lenguaje natural sobre la cartera.
 - **MCP:** las mismas herramientas disponibles para Claude Desktop u otros clientes MCP.
 - **Backend:** Appwrite autoalojado sobre **PostgreSQL**, con migraciones versionadas y login con Google.
 
@@ -42,7 +41,7 @@ bun run dev
 Abre <http://localhost:3000> y pulsa **Entrar como agente demo**.
 La consola de Appwrite está en <http://localhost:8080> (`admin@agentsolver.local` / `AgentSolver#2026!`, solo para desarrollo local).
 
-## Login con Google (opcional)
+## Login con Google y Apple (Appwrite)
 
 1. En [Google Cloud Console](https://console.cloud.google.com/apis/credentials) crea un *ID de cliente de OAuth* de tipo **Aplicación web**.
 2. Añade como **URI de redireccionamiento autorizado**:
@@ -56,11 +55,13 @@ La consola de Appwrite está en <http://localhost:8080> (`admin@agentsolver.loca
 
 Sin estas credenciales el botón de Google devuelve al login con un error; el acceso demo funciona igualmente.
 
-## Copiloto con Claude (opcional)
+Para Apple añade también `APPLE_SERVICE_ID`, `APPLE_KEY_ID`, `APPLE_TEAM_ID` y `APPLE_P8_FILE` al entorno. Appwrite valida Google/Apple y mantiene sus sesiones; AgentSolver solo guarda la sesión de Appwrite en una cookie HTTP-only.
 
-Añade `ANTHROPIC_API_KEY` a `.env.local`. Sin clave, el copiloto responde con texto generado por reglas a partir de las mismas herramientas.
+La página de conexión MCP lee `NEXT_PUBLIC_MCP_URL` durante el build. Usa la URL HTTPS pública del servidor, por ejemplo `https://mcp.tudominio.com`.
 
 ## Servidor MCP
+
+El servidor MCP usa transporte `stdio`, por lo que funciona con clientes de escritorio como Claude Desktop sin exponer un endpoint público. En esta versión no hay una página OAuth ni un endpoint HTTP del MCP. Para añadir OAuth real habría que migrarlo a transporte HTTP y definir proveedor, callback y scopes.
 
 ```bash
 bun run mcp
@@ -73,7 +74,7 @@ Ejemplo para Claude Desktop (`claude_desktop_config.json`):
   "mcpServers": {
     "agentsolver": {
       "command": "bun",
-      "args": ["--env-file=.env.local", "mcp/server.js"],
+      "args": ["--env-file=.env.local", "mcp/server.ts"],
       "cwd": "/ruta/al/repo"
     }
   }
@@ -94,15 +95,15 @@ Herramientas: `list_clients`, `portfolio_summary`, `valuation`, `negotiation_bri
 | `bun run appwrite:configure` | Plataforma web y Google OAuth (si hay credenciales) |
 | `bun run appwrite:demo-user` | Crea el usuario de la demo |
 | `bun run db:migrate` | Aplica migraciones pendientes (idempotente) |
-| `bun run mcp` | Servidor MCP por stdio |
+| `bun run mcp` | Servidor MCP TypeScript por stdio |
 
 ## Estructura
 
 ```
-app/            páginas, login y rutas API (auth, copilot)
-components/     Terminal, simulador, copiloto, shadcn en components/ui
+app/            páginas, login y rutas API (auth)
+components/     Terminal, simulador y shadcn en components/ui
 lib/            datos, cálculos compartidos (tools.js), cliente Appwrite, sesión
-mcp/server.js   servidor MCP
+mcp/server.ts   servidor MCP TypeScript
 db/migrations/    migraciones (001 esquema, 002 índices, 003 datos)
 scripts/        instalación, bootstrap, configuración y migrador
 ```

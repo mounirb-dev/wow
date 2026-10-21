@@ -13,6 +13,17 @@ const SCOPES = [
 ];
 
 let cookie = "";
+
+// The project may already have been created from the Appwrite Console.
+// In that case never try to recreate the account or replace its API key.
+if (existsSync(".env.local")) {
+  const configured = readFileSync(".env.local", "utf8");
+  if (/^APPWRITE_PROJECT_ID=.+/m.test(configured) && /^APPWRITE_API_KEY=.+/m.test(configured)) {
+    console.log("Appwrite is already configured in .env.local; nothing to bootstrap.");
+    process.exit(0);
+  }
+}
+
 async function api(path, { method = "GET", body } = {}) {
   const res = await fetch(ENDPOINT + path, {
     method,
