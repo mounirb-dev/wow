@@ -10,7 +10,6 @@
     "appwrite:down": "docker compose -f appwrite/docker-compose.yml down",
     "appwrite:bootstrap": "bun scripts/bootstrap-appwrite.mjs",
     "db:migrate": "bun --env-file=.env.local scripts/migrate.mjs",
-    "db:migrate:deploy": "bun scripts/migrate.mjs",
     "appwrite:configure": "bun --env-file=.env.local scripts/configure-appwrite.mjs",
     "appwrite:install": "bash scripts/appwrite-install.sh",
     "news:sync": "bun --env-file=.env.local scripts/sync-news.mjs",
