@@ -53,7 +53,7 @@ export function FolderItem({ folder, list, selected, renaming, canEdit, canConfi
       <ContextMenuItem onSelect={onOpen}><FolderOpen />Abrir</ContextMenuItem>
       {canEdit && <ContextMenuItem onSelect={onStartRename}><Pencil />Cambiar nombre</ContextMenuItem>}
       {canConfigure && <ContextMenuItem onSelect={onAccess}><Lock />Acceso…</ContextMenuItem>}
-      {canEdit && folder.kind !== "system" && <><ContextMenuSeparator /><ContextMenuItem variant="destructive" onSelect={onDelete}><Trash2 />Eliminar…</ContextMenuItem></>}
+      {canEdit && <><ContextMenuSeparator /><ContextMenuItem variant="destructive" onSelect={onDelete}><Trash2 />Eliminar…</ContextMenuItem></>}
     </ContextMenuContent>
   </ContextMenu>;
 }

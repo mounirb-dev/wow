@@ -1,4 +1,4 @@
-// Migración 008_workspaces_folders: Multi-tenant: workspaces, miembros y carpetas, más el workspace "default" con sus carpetas de sistema.
+// Migración 008_workspaces_folders: Multi-tenant: workspaces, miembros y carpetas, más el workspace "default". Sin carpetas de ejemplo: cada cuenta empieza sin carpetas.
 export async function up({ db, DB, waitColumns }) {
   await db.createTable(DB, "workspaces", "Workspaces", []);
   await db.createStringColumn(DB, "workspaces", "name", 160, true);
@@ -39,14 +39,4 @@ export async function up({ db, DB, waitColumns }) {
     ownerId: "pending",
     status: "active",
   });
-
-  const folders = [
-    ["priority", "Prioridad alta", "Jugadores con palanca", "system"],
-    ["expiring", "Vencen pronto", "Contratos en 12 meses", "system"],
-    ["followup", "En seguimiento", "Contactos activos", "system"],
-    ["opportunities", "Oportunidades", "Negociaciones abiertas", "system"],
-  ];
-  for (const [id, name, description, kind] of folders) {
-    await db.createRow(DB, "folders", id, { workspaceId: "default", parentId: null, name, description, kind, createdBy: "system" });
-  }
 }

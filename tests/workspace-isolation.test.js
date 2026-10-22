@@ -85,7 +85,7 @@ mock.module("../lib/session.js", () => ({ COOKIE: "as_session", cookieOptions: {
 const { loadPlayer, loadPlayers, loadPlayersFor } = await import("../lib/data.js");
 const { loadStaffDataByPlayer } = await import("../lib/staff-data.js");
 const { loadAllNews, loadPlayerNews, refreshNewsIfStale } = await import("../lib/news-sync.js");
-const { resolveWorkspaceContext } = await import("../lib/workspace.js");
+const { listFolders, resolveWorkspaceContext } = await import("../lib/workspace.js");
 const players = await import("../app/api/players/[id]/route.js");
 const playersRoot = await import("../app/api/players/route.js");
 const staff = await import("../app/api/players/[id]/staff/route.js");
@@ -691,10 +691,10 @@ describe("borrar carpetas", () => {
     expect(store.folders.fSecretChild).toBeUndefined();
   });
 
-  test("las carpetas del sistema no se pueden borrar", async () => {
+  test("las carpetas de ejemplo (kind system) también se pueden borrar", async () => {
     store.folders.fSys = { $id: "fSys", workspaceId: "wsA", name: "Sistema", parentId: null, kind: "system", createdBy: "system" };
-    expect((await remove("fSys")).status).toBe(403);
-    expect(store.folders.fSys).toBeDefined();
+    expect((await remove("fSys")).status).toBe(200);
+    expect(store.folders.fSys).toBeUndefined();
   });
 
   test("si el binario ya no existe en Storage, el borrado termina igualmente", async () => {
@@ -711,5 +711,17 @@ describe("borrar carpetas", () => {
     try { await expect(remove("fA")).rejects.toThrow("boom"); } finally { FakeStorage.prototype.deleteFile = original; }
     expect(store.folders.fA).toBeDefined();
     expect(store.documents.dA).toBeDefined();
+  });
+});
+
+describe("cuenta nueva", () => {
+  beforeEach(seed);
+  test("se crea un workspace personal SIN carpetas ni jugadores de ejemplo", async () => {
+    const newcomer = { $id: "u-nuevo", email: "nuevo@d.test", name: "Nuevo" };
+    const context = await resolveWorkspaceContext(newcomer);
+    expect(context.member.role).toBe("owner");
+    expect(await listFolders(context)).toEqual([]);
+    expect(await loadPlayersFor(context)).toEqual([]);
+    expect(Object.values(store.folders).filter((row) => row.workspaceId === context.workspace.$id)).toEqual([]);
   });
 });

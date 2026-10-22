@@ -61,7 +61,6 @@ export async function DELETE(_request, { params }) {
   const { id } = await params;
   const folder = await getFolder(context, id).catch((error) => { if (error.code === 404) return null; throw error; });
   if (!folder) return NextResponse.json({ error: "Carpeta no encontrada" }, { status: 404 });
-  if (folder.kind === "system") return NextResponse.json({ error: "Las carpetas del sistema no se pueden borrar" }, { status: 403 });
 
   const all = await loadAllFolders(context);
   const branch = [id, ...descendantIds(all, id)];

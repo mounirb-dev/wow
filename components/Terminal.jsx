@@ -13,7 +13,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import ContractClock from "./ContractClock.jsx";
 import Hint from "./Hint.jsx";
 import ActivityChart from "./ActivityChart.jsx";
-import FolderCard from "./FolderCard.jsx";
 import PlayerFolder from "./PlayerFolder.jsx";
 import { curve, fmtM, leverage, monthsLeft, negotiate, portfolio } from "@/lib/tools.js";
 
@@ -86,21 +85,6 @@ export default function Terminal({ players, user }) {
       </header>
 
       <main className="space-y-6 py-6">
-        <section className="border-b pb-10">
-          <div className="mb-7 flex items-end justify-between gap-4">
-            <div>
-              <p className="text-sm font-medium">Carpetas de trabajo</p>
-              <p className="text-xs text-muted-foreground">Organiza el trabajo por estado.</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-x-3 gap-y-8 md:grid-cols-4">
-            <FolderCard title="Prioridad alta" description="Jugadores con palanca" count="4" tone="red" href="/folders/priority" />
-            <FolderCard title="Vencen pronto" description="Contratos en 12 meses" count="3" tone="yellow" href="/folders/expiring" />
-            <FolderCard title="En seguimiento" description="Contactos activos" count="8" tone="blue" href="/folders/followup" />
-            <FolderCard title="Oportunidades" description="Negociaciones abiertas" count="4" tone="green" href="/folders/opportunities" />
-          </div>
-        </section>
-
         <Card className="border bg-card">
           <CardContent className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-start gap-3">
