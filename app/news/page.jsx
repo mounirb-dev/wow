@@ -8,7 +8,7 @@ import { loadPlayers } from "@/lib/data.js";
 import { loadAllNews, refreshNewsIfStale } from "@/lib/news-sync.js";
 import { getWorkspaceContext } from "@/lib/workspace.js";
 
-export const metadata = { title: "AgentSolver · Noticias" };
+export const metadata = { title: "wow · Noticias" };
 
 const cleanText = (value) => String(value || "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").trim();
 

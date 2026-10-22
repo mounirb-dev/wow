@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }) {
   const { id } = await params;
   const player = await loadPlayer(id);
-  return { title: player ? `AgentSolver · ${player.name}` : "AgentSolver · Jugador" };
+  return { title: player ? `wow · ${player.name}` : "wow · Jugador" };
 }
 
 export default async function PlayerPage({ params }) {

@@ -6,7 +6,7 @@ import { requireUser } from "@/lib/session.js";
 import WorkspaceShell from "@/components/WorkspaceShell.jsx";
 import { loadPlayers } from "@/lib/data.js";
 
-export const metadata = { title: "AgentSolver · Sala de decisión" };
+export const metadata = { title: "wow · Sala de decisión" };
 export const dynamic = "force-dynamic";
 
 export default async function DecisionRoomPage() {

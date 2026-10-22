@@ -3,7 +3,7 @@ import { safeNext } from "@/lib/safe-next.js";
 import { getUser } from "@/lib/session.js";
 import ModernAnimatedSignIn from "@/components/ModernAnimatedSignIn.jsx";
 
-export const metadata = { title: "AgentSolver · Acceso" };
+export const metadata = { title: "wow · Acceso" };
 
 export default async function Login({ searchParams }) {
   const params = await searchParams;

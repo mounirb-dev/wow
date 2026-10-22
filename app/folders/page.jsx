@@ -5,7 +5,7 @@ import { canEdit, getWorkspaceContext, listFolders } from "@/lib/workspace.js";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "AgentSolver · Carpetas" };
+export const metadata = { title: "wow · Carpetas" };
 
 // Sección "Carpetas": todas las carpetas y archivos a los que el usuario tiene acceso.
 export default async function FoldersPage() {

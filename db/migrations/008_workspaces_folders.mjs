@@ -35,7 +35,7 @@ export async function up({ db, DB, waitColumns }) {
   await waitColumns("documents");
 
   await db.createRow(DB, "workspaces", "default", {
-    name: "AgentSolver Club",
+    name: "wow Club",
     ownerId: "pending",
     status: "active",
   });

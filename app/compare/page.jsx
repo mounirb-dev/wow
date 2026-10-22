@@ -8,7 +8,7 @@ import WorkspaceShell from "@/components/WorkspaceShell.jsx";
 import { loadPlayers } from "@/lib/data.js";
 import { fmtM, leverage, monthsLeft } from "@/lib/tools.js";
 
-export const metadata = { title: "AgentSolver · Comparador" };
+export const metadata = { title: "wow · Comparador" };
 export const dynamic = "force-dynamic";
 
 export default async function ComparePage() {

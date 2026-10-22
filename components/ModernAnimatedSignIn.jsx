@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import BrandLogo from "./BrandLogo.jsx";
 import ThemeToggle from "./ThemeToggle.jsx";
 import { Google } from "./ui/svgs/google.jsx";
 
@@ -20,6 +21,7 @@ export default function ModernAnimatedSignIn({ error, next = "/" }) {
       <div className="absolute right-5 top-5"><ThemeToggle compact /></div>
       <Card className="w-full max-w-[420px] border-border bg-card text-card-foreground shadow-2xl shadow-black/10 dark:shadow-black/40">
         <CardHeader className="px-7 pb-5 pt-8 text-center sm:px-9">
+          <BrandLogo className="mx-auto mb-5 h-16" />
           <CardTitle className="editorial-heading text-3xl">Entra al panel.</CardTitle>
         </CardHeader>
         <CardContent className="px-7 sm:px-9">

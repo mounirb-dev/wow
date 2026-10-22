@@ -42,11 +42,11 @@ if (login.status >= 300) throw new Error("login failed: " + JSON.stringify(login
 
 let { json: teams } = await api("/teams");
 let team = teams.teams?.[0];
-if (!team) team = (await api("/teams", { method: "POST", body: { teamId: "unique()", name: "AgentSolver" } })).json;
+if (!team) team = (await api("/teams", { method: "POST", body: { teamId: "unique()", name: "wow" } })).json;
 
 let proj = await api(`/projects/${PROJECT_ID}`);
 if (proj.status === 404) {
-  proj = await api("/projects", { method: "POST", body: { projectId: PROJECT_ID, name: "AgentSolver", teamId: team.$id } });
+  proj = await api("/projects", { method: "POST", body: { projectId: PROJECT_ID, name: "wow", teamId: team.$id } });
   if (proj.status >= 300) throw new Error("project failed: " + JSON.stringify(proj.json));
 }
 

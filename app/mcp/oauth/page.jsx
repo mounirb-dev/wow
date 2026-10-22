@@ -2,13 +2,14 @@
 // envía aquí al usuario; si no tiene sesión se le manda al login y vuelve con los mismos
 // parámetros. Al pulsar "Autorizar" se hace POST a /api/mcp/oauth/authorize.
 import Link from "next/link";
-import { Check, LockKeyhole, ShieldCheck } from "lucide-react";
+import { Check, ShieldCheck } from "lucide-react";
+import BrandLogo from "@/components/BrandLogo.jsx";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { validateAuthorizeRequest } from "@/lib/mcp-oauth.js";
 import { getUser } from "@/lib/session.js";
 
-export const metadata = { title: "Conectar MCP · AgentSolver" };
+export const metadata = { title: "Conectar MCP · wow" };
 export const dynamic = "force-dynamic";
 
 const permissions = [
@@ -34,8 +35,8 @@ export default async function McpOAuthPage({ searchParams }) {
     <main className="flex min-h-dvh items-center justify-center bg-background px-4 py-10 text-foreground">
       <Card className="w-full max-w-[460px] overflow-hidden border-border bg-card shadow-2xl shadow-black/20">
         <CardHeader className="border-b border-border px-6 pb-6 pt-7 sm:px-8">
-          <div className="mb-6 grid size-11 place-items-center rounded-xl bg-primary text-primary-foreground"><LockKeyhole className="size-5" aria-hidden="true" /></div>
-          <CardTitle className="text-2xl tracking-tight">Conectar con AgentSolver</CardTitle>
+          <BrandLogo className="mb-5 h-14" />
+          <CardTitle className="text-2xl tracking-tight">Conectar con wow</CardTitle>
           <CardDescription className="mt-2 text-sm leading-6">
             {checked.fatal ? "No se puede completar la conexión." : `${checked.client.name} solicita acceso al MCP de tu workspace.`}
           </CardDescription>

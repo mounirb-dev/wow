@@ -10,7 +10,7 @@ import { requireUser } from "@/lib/session.js";
 import { fmtM, monthsLeft } from "@/lib/tools.js";
 import { canEdit, getWorkspaceContext } from "@/lib/workspace.js";
 
-export const metadata = { title: "AgentSolver · Jugadores" };
+export const metadata = { title: "wow · Jugadores" };
 export const dynamic = "force-dynamic";
 
 const contractEnd = (player) => new Date(player.contractEnd).toLocaleDateString("es-ES", { month: "short", year: "numeric" });

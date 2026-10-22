@@ -36,7 +36,7 @@ const ctx = {
   },
 };
 
-if (!(await exists(() => db.get(DB)))) await db.create(DB, "AgentSolver");
+if (!(await exists(() => db.get(DB)))) await db.create(DB, "wow");
 await ctx.ensureTable("migrations", "migrations");
 if (!(await db.listColumns(DB, "migrations")).columns.length) {
   await db.createStringColumn(DB, "migrations", "name", 255, true);

@@ -1,4 +1,4 @@
-# AgentSolver · Terminal del agente
+# wow · Terminal del agente
 
 Workspace para gestionar una cartera de fútbol, negociaciones, documentos y criterio del staff.
 
@@ -61,11 +61,11 @@ La consola de Appwrite está en <http://localhost:8080> (`admin@agentsolver.loca
 
 Sin estas credenciales el botón de Google devuelve al login con un error.
 
-Appwrite valida Google y mantiene sus sesiones; AgentSolver solo guarda la sesión de Appwrite en una cookie HTTP-only.
+Appwrite valida Google y mantiene sus sesiones; wow solo guarda la sesión de Appwrite en una cookie HTTP-only.
 
 ## Alta de clubes (solo por invitación)
 
-AgentSolver es para clubes seleccionados: iniciar sesión **no** crea ningún workspace. Quien entra sin invitación ve «Todavía no tienes acceso» (`/acceso`). El proceso:
+wow es para clubes seleccionados: iniciar sesión **no** crea ningún workspace. Quien entra sin invitación ve «Todavía no tienes acceso» (`/acceso`). El proceso:
 
 1. El club te pide acceso (email de su primer administrador + nombre del club).
 2. Lo das de alta con un comando (en producción, con las variables de producción cargadas):

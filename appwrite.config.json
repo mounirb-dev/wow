@@ -3,7 +3,7 @@
     "tablesDB": [
         {
             "$id": "agentsolver",
-            "name": "AgentSolver",
+            "name": "wow",
             "enabled": true
         },
         {

@@ -14,7 +14,7 @@ export const maxDuration = 60;
 // leer o escribir datos de nadie.
 async function contextOf(user) {
   const context = await resolveWorkspaceContext(user);
-  if (!context) throw new Error("Esta cuenta no tiene acceso a AgentSolver: hace falta una invitación.");
+  if (!context) throw new Error("Esta cuenta no tiene acceso a wow: hace falta una invitación.");
   return context;
 }
 

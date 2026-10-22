@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { ChevronDown, ChevronLeft, ChevronRight, Folder, FolderTree, GitCompare, LayoutDashboard, Menu, Newspaper, Search, ShieldCheck, Users, X } from "lucide-react";
 import ClubPicker from "./ClubPicker.jsx";
 import ThemeToggle from "./ThemeToggle.jsx";
+import BrandLogo from "./BrandLogo.jsx";
 import WorkspaceMembersPanel from "./WorkspaceMembersPanel.jsx";
 import { useUiStore } from "@/lib/ui-store.js";
 import { Button } from "@/components/ui/button";
@@ -120,6 +121,7 @@ function SidebarPanel({ mobile = false, onNavigate, workspace, canManage }) {
 
   return <aside className={mobile ? "min-w-0" : `hidden shrink-0 md:block ${collapsed ? "w-12" : "w-60"}`}>
     <div className={mobile ? "flex min-h-full min-w-0 flex-col" : "sticky top-5 flex min-h-[calc(100dvh-2.5rem)] min-w-0 flex-col border-r border-border pr-2"}>
+      <Link href="/" aria-label="wow, ir al resumen" className={`mb-3 block px-1 ${collapsed ? "mx-auto" : ""}`}><BrandLogo className={collapsed ? "h-5" : "h-10"} /></Link>
       <WorkspaceHeader workspace={workspace} canManage={canManage} collapsed={collapsed} mobile={mobile} />
       <div className={`flex flex-1 flex-col gap-4 ${collapsed ? "items-center" : ""}`}>
         <div className={`w-full ${collapsed ? "flex justify-center" : ""}`}><SearchBox search={search} onSearch={setSearch} collapsed={collapsed} /></div>
@@ -152,7 +154,7 @@ export default function WorkspaceSidebar(props) {
           <SidebarPanel {...props} mobile onNavigate={() => setOpen(false)} />
         </SheetContent>
       </Sheet>
-      <Link href="/" className="text-sm font-semibold tracking-tight">AgentSolver</Link>
+      <Link href="/" aria-label="wow, ir al resumen"><BrandLogo className="h-8" /></Link>
       <div className="ml-auto"><ThemeToggle compact /></div>
     </div>
   </>;

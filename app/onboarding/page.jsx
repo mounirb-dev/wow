@@ -1,10 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import BrandLogo from "@/components/BrandLogo.jsx";
 import ThemeToggle from "@/components/ThemeToggle.jsx";
 import { MIN_PASSWORD, ONBOARDING_ERRORS } from "@/lib/onboarding.js";
 
-export const metadata = { title: "AgentSolver · Crea tu cuenta" };
+export const metadata = { title: "wow · Crea tu cuenta" };
 
 const inputClass = "h-12 border-input bg-background text-foreground placeholder:text-muted-foreground";
 
@@ -19,8 +20,9 @@ export default async function Onboarding({ searchParams }) {
     <div className="absolute right-5 top-5"><ThemeToggle compact /></div>
     <Card className="w-full max-w-[420px] border-border bg-card text-card-foreground shadow-2xl shadow-black/10 dark:shadow-black/40">
       <CardHeader className="px-7 pb-5 pt-8 text-center sm:px-9">
+        <BrandLogo className="mx-auto mb-5 h-16" />
         <CardTitle className="editorial-heading text-3xl">{hasLink ? "Crea tu cuenta." : "Pide tu enlace."}</CardTitle>
-        <p className="mt-2 text-sm text-muted-foreground">{hasLink ? "Te han invitado a un workspace de AgentSolver. Elige cómo te llamas y una contraseña." : "Escribe el email al que te invitaron y te mandamos un enlace nuevo."}</p>
+        <p className="mt-2 text-sm text-muted-foreground">{hasLink ? "Te han invitado a un workspace de wow. Elige cómo te llamas y una contraseña." : "Escribe el email al que te invitaron y te mandamos un enlace nuevo."}</p>
       </CardHeader>
       <CardContent className="px-7 pb-8 sm:px-9">
         {message && <p role="alert" className="mb-5 rounded-lg border border-red-300 bg-red-50 p-3 text-xs leading-5 text-red-700 dark:border-red-900/70 dark:bg-red-950/30 dark:text-red-300">{message}</p>}

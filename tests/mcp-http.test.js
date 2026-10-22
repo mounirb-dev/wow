@@ -72,7 +72,7 @@ describe("endpoint /mcp", () => {
   test("initialize y tools/list con un token real", async () => {
     const token = login();
     const init = await (await handleMcpRequest(rpc(token, "initialize", { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "t", version: "1" } }), deps)).json();
-    expect(init.result.serverInfo.name).toBe("agentsolver");
+    expect(init.result.serverInfo.name).toBe("wow");
     const list = await (await handleMcpRequest(rpc(token, "tools/list", {}, 2), deps)).json();
     expect(list.result.tools.map((t) => t.name).sort()).toEqual(["add_player", "add_suitor", "decision_matrix", "delete_player", "lineup_suggestion", "list_clients", "negotiation_brief", "player_report", "portfolio_summary", "remove_suitor", "save_staff_opinion", "squad_alerts", "squad_balance", "update_player", "valuation"]);
     // Solo las herramientas de escritura dejan de ser de solo lectura; borrar y quitar clubes se marcan como destructivas.

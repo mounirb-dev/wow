@@ -6,7 +6,7 @@ import NegotiationKanban from "@/components/NegotiationKanban.jsx";
 import { loadStaffDataByPlayer } from "@/lib/staff-data.js";
 import { requireUser } from "@/lib/session.js";
 
-export const metadata = { title: "AgentSolver · Negociaciones" };
+export const metadata = { title: "wow · Negociaciones" };
 export const dynamic = "force-dynamic";
 
 export default async function NegotiationsPage({ searchParams }) {
