@@ -19,12 +19,22 @@ const skip = new Set(inCI ? [] : (process.env.VERIFY_SKIP ?? "").split(",").filt
 // La build solo necesita que existan estas variables, no que sean reales.
 const buildEnv = { APPWRITE_ENDPOINT: "https://example.invalid/v1", APPWRITE_PROJECT_ID: "ci", APPWRITE_API_KEY: "ci", ...process.env };
 
-const run = (cmd, args, env = process.env) => spawnSync(cmd, args, { stdio: "inherit", env, shell: false }).status === 0;
+// En Windows `npx` es npx.cmd: spawnSync sin shell falla con ENOENT (y el paso se marcaba FALLO
+// sin ningún mensaje). Solo en ese caso se usa shell, entrecomillando los argumentos con espacios.
+const run = (cmd, args, env = process.env) => {
+  const viaShell = process.platform === "win32" && cmd === "npx";
+  const result = spawnSync(cmd, viaShell ? args.map((arg) => (/[\s"]/.test(arg) ? `"${arg}"` : arg)) : args, { stdio: "inherit", env, shell: viaShell });
+  if (result.error) console.error(`No se pudo ejecutar ${cmd}: ${result.error.message}`);
+  return result.status === 0;
+};
 
 const steps = [
   ["lockfile", "bun.lock sincronizado con package.json", () => run("bun", ["install", "--frozen-lockfile"])],
   ["test", "tests unitarios y de integración (bun test)", () => run("bun", ["test"])],
-  ["build", "next build compila sin errores", () => run("npx", ["next", "build"], buildEnv)],
+  // Next se lanza con node y su binario local, no con `npx next`: el shim .bin/next.exe que deja bun
+  // hace que la build cargue otro Next/React desde un node_modules de una carpeta superior y el
+  // prerender de /_global-error falla con "useContext de null".
+  ["build", "next build compila sin errores", () => run(process.execPath, [join(process.cwd(), "node_modules", "next", "dist", "bin", "next"), "build"], buildEnv)],
   ["audit", "bun audit: ninguna vulnerabilidad conocida en dependencias", () => run("bun", ["audit"])],
   ["snyk", "Snyk: dependencias (SCA) y código (SAST)", () => {
     if (!process.env.SNYK_TOKEN) {
