@@ -8,7 +8,7 @@ Workspace para gestionar una cartera de fútbol, negociaciones, documentos y cri
 - **Staff:** comentarios y valoraciones compartidas entre los miembros del workspace (Negociaciones → "Mi valoración").
 - **Archivos:** carpetas con acceso restringible; subida de fotos, vídeos y cualquier archivo por partes (hasta `MAX_UPLOAD_MB`, 1024 por defecto), vista previa de fotos, vídeo y audio, y borrado de carpetas con clic derecho.
 - **MCP:** las mismas herramientas disponibles para Claude Desktop u otros clientes MCP.
-- **Backend:** Appwrite sobre **PostgreSQL**, con migraciones versionadas, Appwrite Storage y login con Google/Apple.
+- **Backend:** Appwrite sobre **PostgreSQL**, con migraciones versionadas, Appwrite Storage y login con Google.
 
 Los perfiles, noticias, valoraciones, carpetas y archivos se leen de Appwrite. La aplicación no crea registros de prueba automáticamente.
 
@@ -47,7 +47,7 @@ bun run dev
 Abre <http://localhost:3000> y entra con una cuenta real de Appwrite.
 La consola de Appwrite está en <http://localhost:8080> (`admin@agentsolver.local` / `AgentSolver#2026!`, solo para desarrollo local).
 
-## Login con Google y Apple (Appwrite)
+## Login con Google (Appwrite)
 
 1. En [Google Cloud Console](https://console.cloud.google.com/apis/credentials) crea un *ID de cliente de OAuth* de tipo **Aplicación web**.
 2. Añade como **URI de redireccionamiento autorizado**:
@@ -61,7 +61,7 @@ La consola de Appwrite está en <http://localhost:8080> (`admin@agentsolver.loca
 
 Sin estas credenciales el botón de Google devuelve al login con un error.
 
-Para Apple añade también `APPLE_SERVICE_ID`, `APPLE_KEY_ID`, `APPLE_TEAM_ID` y `APPLE_P8_FILE` al entorno. Appwrite valida Google/Apple y mantiene sus sesiones; AgentSolver solo guarda la sesión de Appwrite en una cookie HTTP-only.
+Appwrite valida Google y mantiene sus sesiones; AgentSolver solo guarda la sesión de Appwrite en una cookie HTTP-only.
 
 ## Servidor MCP (remoto, con OAuth)
 

@@ -8,12 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import ThemeToggle from "./ThemeToggle.jsx";
-import { Apple } from "./ui/svgs/apple.jsx";
 import { Google } from "./ui/svgs/google.jsx";
 
 export default function ModernAnimatedSignIn({ error, next = "/" }) {
   // Tras entrar se vuelve a `next` (p. ej. al consentimiento de /mcp/oauth); por defecto, al resumen.
-  const oauthHref = (provider) => `/api/auth/oauth/${provider}?next=${encodeURIComponent(next)}`;
+  const googleHref = `/api/auth/oauth/google?next=${encodeURIComponent(next)}`;
   const [showPassword, setShowPassword] = useState(false);
 
   return (
@@ -24,14 +23,9 @@ export default function ModernAnimatedSignIn({ error, next = "/" }) {
           <CardTitle className="editorial-heading text-3xl">Entra al panel.</CardTitle>
         </CardHeader>
         <CardContent className="px-7 sm:px-9">
-          <div className="grid grid-cols-2 gap-3">
-            <Button asChild variant="outline" className="h-11 border-border bg-transparent text-foreground hover:bg-muted hover:text-foreground">
-              <a href={oauthHref("apple")}><Apple data-icon="inline-start" />Apple</a>
-            </Button>
-            <Button asChild variant="outline" className="h-11 border-border bg-transparent text-foreground hover:bg-muted hover:text-foreground">
-              <a href={oauthHref("google")}><Google className="size-4" aria-label="Google" />Google</a>
-            </Button>
-          </div>
+          <Button asChild variant="outline" className="h-11 w-full border-border bg-transparent text-foreground hover:bg-muted hover:text-foreground">
+            <a href={googleHref}><Google className="size-4" aria-label="Google" />Google</a>
+          </Button>
           <div className="my-7 flex items-center gap-3 text-[10px] uppercase tracking-[0.25em] text-muted-foreground"><Separator className="bg-border" />o<Separator className="bg-border" /></div>
           <form action="/api/auth/login" method="post" className="flex flex-col gap-5">
             <input type="hidden" name="next" value={next} />

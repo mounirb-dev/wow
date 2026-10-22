@@ -1,4 +1,4 @@
-// GET /api/auth/callback — destino del login social (Google/Apple). Appwrite devuelve
+// GET /api/auth/callback — destino del login social (Google). Appwrite devuelve
 // userId+secret; los canjeamos por una sesión. `state` (cookie vs query) evita CSRF y `next`
 // solo admite rutas internas (empiezan por "/" y no por "//") para no permitir open-redirects.
 import { NextResponse } from "next/server";
