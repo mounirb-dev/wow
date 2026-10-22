@@ -10,7 +10,8 @@ const errorCopy = {
   email: "Escribe un email válido.",
   send: "No se pudo enviar el código. Revisa el email o la configuración de correo de Appwrite.",
   verify: "El código no es válido o ha caducado.",
-  password: "Las contraseñas no coinciden o no cumplen la política del proyecto.",
+  mismatch: "Las contraseñas no coinciden.",
+  policy: "La contraseña no cumple la política: mínimo 8 caracteres y no puede ser demasiado común ni reutilizada.",
 };
 const inputClass = "h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground outline-none focus:border-foreground";
 const primaryButton = "h-12 w-full rounded-xl bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90";
