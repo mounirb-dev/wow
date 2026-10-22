@@ -7,6 +7,7 @@ import { downloadPath, plural } from "@/lib/files.js";
 import { useFileDrop } from "@/lib/use-file-drop.js";
 import { useFolderFiles } from "@/lib/use-folder-files.js";
 import { useSubfolders } from "@/lib/use-subfolders.js";
+import DeleteFolderDialog from "./DeleteFolderDialog.jsx";
 import DesktopContent from "./DesktopContent.jsx";
 import { DesktopActions, DesktopTitle, DesktopViewControls } from "./DesktopToolbar.jsx";
 import FolderAccessDialog from "./FolderAccessDialog.jsx";
@@ -21,11 +22,12 @@ export default function FolderDesktop({ folderId, name, canEdit, canCreateFolder
   const router = useRouter();
   const isRoot = folderId == null;
   const canUpload = canEdit && !isRoot;
-  const { folders, createFolder, renameFolder, patchFolder } = useSubfolders({ parentId: folderId ?? null, initialFolders, refresh: () => router.refresh() });
+  const { folders, createFolder, renameFolder, removeFolder, patchFolder } = useSubfolders({ parentId: folderId ?? null, initialFolders, refresh: () => router.refresh() });
   const { files, loading, uploading, upload, removeFile } = useFolderFiles(folderId);
   const { dragging, dropProps } = useFileDrop(canUpload, upload);
   const [currentAccess, setCurrentAccess] = useState({ restricted: Boolean(current?.restricted), allowedUserIds: current?.allowedUserIds ?? [] });
   const [accessTarget, setAccessTarget] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [view, setView] = useState("grid");
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(null);
@@ -41,6 +43,7 @@ export default function FolderDesktop({ folderId, name, canEdit, canCreateFolder
     select: setSelected,
     startRename: setRenaming,
     openAccess: setAccessTarget,
+    askDelete: setDeleteTarget,
     removeFile,
     openFolder: (id) => (onOpenFolder ? onOpenFolder(id) : router.push(`/folders/${id}`)),
     download: (file) => { window.location.href = downloadPath(file); },
@@ -55,6 +58,13 @@ export default function FolderDesktop({ folderId, name, canEdit, canCreateFolder
       if (label.trim() !== previous) await renameFolder(id, label);
     },
   };
+
+  async function confirmDelete(folder) {
+    if (await removeFolder(folder.$id)) {
+      setDeleteTarget(null);
+      setSelected(null);
+    }
+  }
 
   function accessSaved(id, access) {
     if (id === folderId) setCurrentAccess(access); else patchFolder(id, access);
@@ -104,5 +114,6 @@ export default function FolderDesktop({ folderId, name, canEdit, canCreateFolder
       />
     </div>
     <FolderAccessDialog folder={accessTarget} onClose={() => setAccessTarget(null)} onSaved={accessSaved} />
+    <DeleteFolderDialog folder={deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={confirmDelete} />
   </section>;
 }

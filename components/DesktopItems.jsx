@@ -42,7 +42,7 @@ function FolderBody({ folder, list, selected, renaming, onRename }) {
 }
 
 // Subcarpeta del escritorio: clic selecciona, doble clic/Enter abre, clic derecho abre el menú.
-export function FolderItem({ folder, list, selected, renaming, canEdit, canConfigure, onSelect, onOpen, onStartRename, onRename, onAccess }) {
+export function FolderItem({ folder, list, selected, renaming, canEdit, canConfigure, onSelect, onOpen, onStartRename, onRename, onAccess, onDelete }) {
   return <ContextMenu>
     <ContextMenuTrigger asChild>
       <button type="button" onClick={(event) => select(event, onSelect)} onDoubleClick={onOpen} onKeyDown={(event) => { if (event.key === "Enter") onOpen(); }} className={`${itemClass(selected)} ${list ? rowClass : ""}`} aria-label={`Carpeta ${folder.name}`}>
@@ -53,6 +53,7 @@ export function FolderItem({ folder, list, selected, renaming, canEdit, canConfi
       <ContextMenuItem onSelect={onOpen}><FolderOpen />Abrir</ContextMenuItem>
       {canEdit && <ContextMenuItem onSelect={onStartRename}><Pencil />Cambiar nombre</ContextMenuItem>}
       {canConfigure && <ContextMenuItem onSelect={onAccess}><Lock />Acceso…</ContextMenuItem>}
+      {canEdit && folder.kind !== "system" && <><ContextMenuSeparator /><ContextMenuItem variant="destructive" onSelect={onDelete}><Trash2 />Eliminar…</ContextMenuItem></>}
     </ContextMenuContent>
   </ContextMenu>;
 }

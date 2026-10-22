@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { accessibleFolderIds, canConfigureAccess, sanitizeAllowedUserIds } from "../lib/folder-access.js";
+import { accessibleFolderIds, canConfigureAccess, descendantIds, sanitizeAllowedUserIds } from "../lib/folder-access.js";
 
 const folder = (id, extra = {}) => ({ $id: id, parentId: null, createdBy: "creator", ...extra });
 const member = (userId, role = "editor") => ({ userId, role });
@@ -42,5 +42,19 @@ describe("sanitizeAllowedUserIds", () => {
     expect(sanitizeAllowedUserIds("ana", members)).toBeNull();
     expect(sanitizeAllowedUserIds([1], members)).toBeNull();
     expect(sanitizeAllowedUserIds(Array(101).fill("ana"), members)).toBeNull();
+  });
+});
+
+describe("descendantIds", () => {
+  const tree = [folder("root"), folder("a", { parentId: "root" }), folder("b", { parentId: "a" }), folder("c", { parentId: "root" }), folder("other"), folder("o1", { parentId: "other" })];
+  test("devuelve toda la rama sin incluir la raíz", () => expect(descendantIds(tree, "root").sort()).toEqual(["a", "b", "c"]));
+  test("una hoja y un id desconocido no tienen descendientes", () => {
+    expect(descendantIds(tree, "b")).toEqual([]);
+    expect(descendantIds(tree, "ghost")).toEqual([]);
+  });
+  test("no se sale de su rama", () => expect(descendantIds(tree, "other")).toEqual(["o1"]));
+  test("tolera ciclos de padres sin repetir ni quedarse en bucle", () => {
+    const cyclic = [folder("p", { parentId: "q" }), folder("q", { parentId: "p" })];
+    expect(descendantIds(cyclic, "p")).toEqual(["q"]);
   });
 });

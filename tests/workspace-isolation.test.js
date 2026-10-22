@@ -620,3 +620,96 @@ describe("alta y baja de jugadores", () => {
     expect(await loadPlayerNews("pA")).toEqual([]);
   });
 });
+
+describe("borrar carpetas", () => {
+  beforeEach(seed);
+  const remove = (id) => folder.DELETE(json("DELETE"), params({ id }));
+
+  test("un editor borra una carpeta: desaparecen la fila, sus archivos y los binarios; nada de otro workspace", async () => {
+    const res = await remove("fA");
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ ok: true, folders: 1, files: 1 });
+    expect(store.folders.fA).toBeUndefined();
+    expect(store.documents.dA).toBeUndefined();
+    expect(storageCalls.deleted).toEqual(["binA"]);
+    expect(store.folders.fB).toBeDefined();
+    expect(store.documents.dB).toBeDefined();
+  });
+
+  test("borra en cascada subcarpetas y archivos de toda la rama", async () => {
+    store.folders.fKid = { $id: "fKid", workspaceId: "wsA", name: "Hija", parentId: "fOpen", createdBy: users.adminA.$id };
+    store.folders.fGrandKid = { $id: "fGrandKid", workspaceId: "wsA", name: "Nieta", parentId: "fKid", createdBy: users.adminA.$id };
+    store.documents.dKid = { $id: "dKid", workspaceId: "wsA", folderId: "fKid", name: "k.pdf", storageFileId: "binKid" };
+    store.documents.dGrand = { $id: "dGrand", workspaceId: "wsA", folderId: "fGrandKid", name: "g.pdf", storageFileId: "binGrand" };
+    const res = await remove("fOpen");
+    expect(await res.json()).toMatchObject({ folders: 3, files: 2 });
+    expect(["fOpen", "fKid", "fGrandKid"].filter((id) => store.folders[id])).toEqual([]);
+    expect(["dKid", "dGrand"].filter((id) => store.documents[id])).toEqual([]);
+    expect(storageCalls.deleted.sort()).toEqual(["binGrand", "binKid"]);
+    expect(store.folders.fA).toBeDefined();
+  });
+
+  test("el viewer no puede borrar y sin sesión es 401", async () => {
+    as(users.viewerA);
+    expect((await remove("fA")).status).toBe(403);
+    as(null);
+    expect((await remove("fA")).status).toBe(401);
+    expect(store.folders.fA).toBeDefined();
+    expect(storageCalls.deleted).toEqual([]);
+  });
+
+  test("una carpeta de otro workspace y una inexistente dan el mismo 404", async () => {
+    const foreign = await remove("fB");
+    const missing = await remove("nadie");
+    expect(foreign.status).toBe(404);
+    expect(missing.status).toBe(404);
+    expect(await foreign.json()).toEqual(await missing.json());
+    expect(store.folders.fB).toBeDefined();
+    expect(store.documents.dB).toBeDefined();
+  });
+
+  test("una carpeta restringida a la que no tienes acceso es 404 y no se toca", async () => {
+    expect((await remove("fSecret")).status).toBe(404);
+    expect(store.folders.fSecret).toBeDefined();
+    expect(store.documents.dSecret).toBeDefined();
+  });
+
+  test("si dentro hay una subcarpeta restringida que no ves, no se borra nada", async () => {
+    store.folders.fHidden = { $id: "fHidden", workspaceId: "wsA", name: "Oculta", parentId: "fOpen", createdBy: users.adminA.$id, restricted: true, allowedUserIds: [] };
+    const res = await remove("fOpen");
+    expect(res.status).toBe(403);
+    expect(store.folders.fOpen).toBeDefined();
+    expect(store.folders.fHidden).toBeDefined();
+    expect(storageCalls.deleted).toEqual([]);
+  });
+
+  test("un admin sí puede borrar una rama restringida entera", async () => {
+    as(users.adminA);
+    const res = await remove("fSecret");
+    expect(await res.json()).toMatchObject({ folders: 2, files: 2 });
+    expect(storageCalls.deleted.sort()).toEqual(["binChild", "binSecret"]);
+    expect(store.folders.fSecretChild).toBeUndefined();
+  });
+
+  test("las carpetas del sistema no se pueden borrar", async () => {
+    store.folders.fSys = { $id: "fSys", workspaceId: "wsA", name: "Sistema", parentId: null, kind: "system", createdBy: "system" };
+    expect((await remove("fSys")).status).toBe(403);
+    expect(store.folders.fSys).toBeDefined();
+  });
+
+  test("si el binario ya no existe en Storage, el borrado termina igualmente", async () => {
+    const original = FakeStorage.prototype.deleteFile;
+    FakeStorage.prototype.deleteFile = async () => { throw Object.assign(new Error("not found"), { code: 404 }); };
+    try { expect((await remove("fA")).status).toBe(200); } finally { FakeStorage.prototype.deleteFile = original; }
+    expect(store.documents.dA).toBeUndefined();
+    expect(store.folders.fA).toBeUndefined();
+  });
+
+  test("un fallo real de Storage deja la carpeta en pie para poder reintentar", async () => {
+    const original = FakeStorage.prototype.deleteFile;
+    FakeStorage.prototype.deleteFile = async () => { throw Object.assign(new Error("boom"), { code: 500 }); };
+    try { await expect(remove("fA")).rejects.toThrow("boom"); } finally { FakeStorage.prototype.deleteFile = original; }
+    expect(store.folders.fA).toBeDefined();
+    expect(store.documents.dA).toBeDefined();
+  });
+});
