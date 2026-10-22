@@ -1,17 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Search } from "lucide-react";
 import { useAllFiles } from "@/lib/use-all-files.js";
-import { formatDate, kindLabel, plural } from "@/lib/files.js";
-import DownloadButton from "./DownloadButton.jsx";
-import { MacFileIcon, MacFolderIcon } from "./MacIcons.jsx";
+import { plural } from "@/lib/files.js";
+import AllFilesRow from "./AllFilesRow.jsx";
+import FilePreviewDialog from "./FilePreviewDialog.jsx";
+import { MacFolderIcon } from "./MacIcons.jsx";
 
 // Todos los archivos del workspace (de las carpetas a las que el usuario puede entrar), con la
 // carpeta de cada uno. `onOpenFolder(id)` salta a su carpeta.
 export default function AllFilesView({ onOpenFolder }) {
   const files = useAllFiles();
   const [query, setQuery] = useState("");
+  const [previewFile, setPreviewFile] = useState(null);
+  const closePreview = useCallback(() => setPreviewFile(null), []);
 
   const needle = query.trim().toLocaleLowerCase();
   const shown = (files ?? []).filter((file) => !needle || file.name.toLocaleLowerCase().includes(needle) || file.folderPath.toLocaleLowerCase().includes(needle));
@@ -26,15 +29,9 @@ export default function AllFilesView({ onOpenFolder }) {
       {files && !files.length && <div className="flex flex-col items-center gap-3 px-6 py-14 text-center"><MacFolderIcon className="w-20 opacity-60" /><p className="text-sm font-medium">Todavía no hay archivos</p><p className="max-w-xs text-sm text-muted-foreground">Los archivos que subas a cualquier carpeta aparecerán aquí.</p></div>}
       {files?.length > 0 && !shown.length && <p className="py-16 text-center text-sm text-muted-foreground">Sin resultados para “{query}”.</p>}
       <ul className="flex flex-col gap-0.5">
-        {shown.map((file) => <li key={file.$id} className="group flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-foreground/5">
-          <MacFileIcon name={file.name} className="h-7 w-6 shrink-0" />
-          <span className="min-w-0 flex-1 truncate text-sm">{file.name}</span>
-          <button type="button" onClick={() => onOpenFolder(file.folderId)} className="hidden max-w-48 items-center gap-1.5 truncate rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground sm:flex" title={`Abrir ${file.folderPath}`}><MacFolderIcon className="w-4 shrink-0" /><span className="truncate">{file.folderPath}</span></button>
-          <span className="hidden w-32 text-xs text-muted-foreground md:block">{kindLabel(file.name)}</span>
-          <span className="hidden w-28 text-xs text-muted-foreground lg:block">{formatDate(file.$createdAt)}</span>
-          <DownloadButton file={file} />
-        </li>)}
+        {shown.map((file) => <AllFilesRow key={file.$id} file={file} onOpenFolder={onOpenFolder} onPreview={setPreviewFile} />)}
       </ul>
     </div>
+    <FilePreviewDialog file={previewFile} onClose={closePreview} />
   </section>;
 }

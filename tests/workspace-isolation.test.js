@@ -50,10 +50,22 @@ class FakeTablesDB {
   }
 }
 
+// Bytes guardados en Storage por id (las partes de las subidas); sirven para leerlos de vuelta.
+let storedFiles = {};
+
 class FakeStorage {
-  async createFile(_bucket, id, file) { storageCalls.created.push({ id, name: file?.filename, isInputFile: typeof file?.size === "function" }); return {}; }
-  async deleteFile(_bucket, id) { storageCalls.deleted.push(id); }
-  async getFileDownload(_bucket, id) { storageCalls.downloaded.push(id); return Buffer.from("contenido"); }
+  async createFile(_bucket, id, file) {
+    storageCalls.created.push({ id, name: file?.filename, isInputFile: typeof file?.size === "function" });
+    if (storedFiles[id]) throw Object.assign(new Error("already exists"), { code: 409 });
+    storedFiles[id] = Buffer.from(await (await file.toFile()).arrayBuffer());
+    return {};
+  }
+  async getFile(_bucket, id) {
+    if (!storedFiles[id]) throw notFound();
+    return { $id: id, sizeOriginal: storedFiles[id].length };
+  }
+  async deleteFile(_bucket, id) { storageCalls.deleted.push(id); delete storedFiles[id]; }
+  async getFileDownload(_bucket, id) { storageCalls.downloaded.push(id); return storedFiles[id] ?? Buffer.from("contenido"); }
   async getFilePreview(_bucket, id) { storageCalls.previewed.push(id); return Buffer.from("png"); }
 }
 
@@ -96,6 +108,8 @@ const member = await import("../app/api/workspace/members/[id]/route.js");
 const folders = await import("../app/api/workspace/folders/route.js");
 const folder = await import("../app/api/workspace/folders/[id]/route.js");
 const files = await import("../app/api/workspace/folders/[id]/files/route.js");
+const upload = await import("../app/api/workspace/folders/[id]/files/upload/route.js");
+const { signUpload, verifyUpload } = await import("../lib/upload-token.js");
 const file = await import("../app/api/workspace/folders/[id]/files/[fileId]/route.js");
 const allFiles = await import("../app/api/workspace/files/route.js");
 const icon = await import("../app/api/workspace/icon/route.js");
@@ -144,6 +158,7 @@ function seed() {
     ]),
   };
   storageCalls.created.length = storageCalls.deleted.length = storageCalls.downloaded.length = storageCalls.previewed.length = 0;
+  storedFiles = {};
   as(users.editorA);
 }
 
@@ -543,13 +558,6 @@ describe("club del workspace y subidas a Storage", () => {
     expect((await upload(new File(["<svg/>"], "x.svg", { type: "image/svg+xml" }))).status).toBe(400);
     expect((await upload(new File(["GIF"], "x.gif", { type: "image/gif" }))).status).toBe(400);
   });
-
-  test("subir un archivo a una carpeta envía un InputFile con su nombre", async () => {
-    const form = new FormData();
-    form.set("file", new File(["hola"], "informe.pdf", { type: "application/pdf" }));
-    expect((await files.POST(new Request("https://app.test/api", { method: "POST", body: form }), params({ id: "fA" }))).status).toBe(201);
-    expect(storageCalls.created).toEqual([expect.objectContaining({ name: "informe.pdf", isInputFile: true })]);
-  });
 });
 
 describe("alta y baja de jugadores", () => {
@@ -840,5 +848,347 @@ describe("editar datos de un jugador", () => {
   test("no se pueden cambiar campos internos desde el cuerpo", async () => {
     expect((await patch({ workspaceId: "wsB", seed: 99, momentum: 1 })).status).toBe(400);
     expect(store.players.pA.workspaceId).toBe("wsA");
+  });
+});
+
+describe("subida de archivos por partes", () => {
+  beforeEach(seed);
+  const MB = 1024 * 1024;
+  const PART = 4 * MB;
+  // Contenido con un patrón que cambia en cada byte, para comprobar que se reconstruye exacto.
+  const make = (length) => Buffer.from(Uint8Array.from({ length }, (_, index) => (index * 7 + 3) % 251));
+  const open = (body, id = "fA") => files.POST(json("POST", body), params({ id }));
+  const put = (token, index, bytes, id = "fA") => upload.PUT(new Request(`https://app.test/api?part=${index}`, { method: "PUT", headers: { "x-upload-token": token }, body: bytes }), params({ id }));
+  const finish = (token, id = "fA") => upload.POST(new Request("https://app.test/api", { method: "POST", headers: { "x-upload-token": token } }), params({ id }));
+  const abort = (token, id = "fA") => upload.DELETE(new Request("https://app.test/api", { method: "DELETE", headers: { "x-upload-token": token } }), params({ id }));
+  const get = (fileId, { query = "", range, id = "fA" } = {}) => file.GET(new Request(`https://app.test/api${query}`, { headers: range ? { range } : {} }), params({ id, fileId }));
+
+  // Sube un archivo entero y devuelve { token, content, doc }.
+  async function uploadWhole(content, meta = { name: "partido.mp4", type: "video/mp4" }) {
+    const opened = await open({ ...meta, size: content.length });
+    const { token, parts } = await opened.json();
+    for (let index = 0; index < parts; index += 1) {
+      const res = await put(token, index, content.subarray(index * PART, (index + 1) * PART));
+      expect(res.status).toBe(200);
+    }
+    const done = await finish(token);
+    return { token, content, res: done, doc: (await done.clone().json()).file };
+  }
+
+  test("abrir una subida devuelve token, tamaño de parte y número de partes", async () => {
+    const res = await open({ name: "gol.mp4", size: PART * 2 + 1, type: "video/mp4" });
+    expect(res.status).toBe(201);
+    expect(await res.json()).toMatchObject({ token: expect.any(String), partSize: PART, parts: 3 });
+  });
+
+  test("flujo completo con un vídeo de 9 MB: 3 partes, documento creado y contenido exacto", async () => {
+    const { doc, res } = await uploadWhole(make(PART * 2 + MB));
+    expect(res.status).toBe(201);
+    expect(doc).toMatchObject({ name: "partido.mp4", mimeType: "video/mp4", size: PART * 2 + MB, folderId: "fA", workspaceId: "wsA", createdBy: users.editorA.$id });
+    expect(doc.partIds).toBeUndefined();
+    expect(doc.storageFileId).toBeUndefined();
+    const row = store.documents[doc.$id];
+    expect(row.partIds).toHaveLength(3);
+    expect(row.partIds.map((id) => storedFiles[id].length)).toEqual([PART, PART, MB]);
+
+    const listed = await (await files.GET(json("GET"), params({ id: "fA" }))).json();
+    expect(listed.files.find((item) => item.$id === doc.$id)).toMatchObject({ size: PART * 2 + MB });
+    expect(JSON.stringify(listed)).not.toContain(row.partIds[0]);
+  });
+
+  test("una foto pequeña (1 parte) y un tipo cualquiera (.zip, .exe) también se suben", async () => {
+    expect((await uploadWhole(make(1000), { name: "foto.jpg", type: "image/jpeg" })).res.status).toBe(201);
+    expect((await uploadWhole(make(500), { name: "datos.zip", type: "application/zip" })).res.status).toBe(201);
+    expect((await uploadWhole(make(500), { name: "raro.exe", type: "" })).res.status).toBe(201);
+  });
+
+  test("el nombre se limpia: sin rutas ni caracteres de control y con tope de 255", async () => {
+    const { doc } = await uploadWhole(make(10), { name: "..\\..\\etc/pass\nwd.mp4", type: "video/mp4" });
+    expect(doc.name).toBe(".._.._etc_pass_wd.mp4");
+    const long = await (await open({ name: `${"a".repeat(400)}.mp4`, size: 10 })).json();
+    expect(verifyUpload(long.token).n.length).toBe(255);
+  });
+
+  test("abrir: rol, sesión, carpeta y datos", async () => {
+    as(users.viewerA);
+    expect((await open({ name: "a.mp4", size: 10 })).status).toBe(403);
+    as(null);
+    expect((await open({ name: "a.mp4", size: 10 })).status).toBe(401);
+    as(users.editorA);
+    expect((await open({ name: "a.mp4", size: 10 }, "fB")).status).toBe(404);
+    expect((await open({ name: "a.mp4", size: 10 }, "fSecret")).status).toBe(404);
+    expect((await open({ name: "a.mp4", size: 10 }, "nadie")).status).toBe(404);
+    expect((await open({ size: 10 })).status).toBe(400);
+    for (const size of [0, -5, 1.5, "mucho", null, undefined]) expect((await open({ name: "a.mp4", size })).status).toBe(400);
+  });
+
+  test("el tope por archivo se respeta (MAX_UPLOAD_MB)", async () => {
+    process.env.MAX_UPLOAD_MB = "2";
+    try {
+      expect((await open({ name: "a.mp4", size: 3 * MB })).status).toBe(413);
+      expect((await open({ name: "a.mp4", size: 2 * MB })).status).toBe(201);
+    } finally { delete process.env.MAX_UPLOAD_MB; }
+  });
+
+  test("partes inválidas: índice fuera de rango y tamaño que no cuadra", async () => {
+    const { token } = await (await open({ name: "a.mp4", size: PART + 10 })).json();
+    expect((await put(token, 2, make(10))).status).toBe(400);
+    expect((await put(token, -1, make(10))).status).toBe(400);
+    expect((await put(token, 0, make(100))).status).toBe(400);
+    expect((await put(token, 1, make(11))).status).toBe(400);
+    expect(Object.keys(storedFiles)).toEqual([]);
+  });
+
+  test("cerrar sin todas las partes, o con una incompleta, es 409 y no crea el documento", async () => {
+    const before = Object.keys(store.documents).length;
+    const { token } = await (await open({ name: "a.mp4", size: PART + 10 })).json();
+    expect((await finish(token)).status).toBe(409);
+    expect((await put(token, 0, make(PART))).status).toBe(200);
+    expect((await finish(token)).status).toBe(409);
+    expect(Object.keys(store.documents)).toHaveLength(before);
+  });
+
+  test("reintentar una parte ya subida es inocuo; cerrar dos veces devuelve el mismo documento", async () => {
+    const { token } = await (await open({ name: "a.mp4", size: 20 })).json();
+    expect((await put(token, 0, make(20))).status).toBe(200);
+    expect((await put(token, 0, make(20))).status).toBe(200);
+    const first = await (await finish(token)).json();
+    const second = await finish(token);
+    expect(second.status).toBe(200);
+    expect((await second.json()).file.$id).toBe(first.file.$id);
+    expect(Object.values(store.documents).filter((row) => row.name === "a.mp4")).toHaveLength(1);
+  });
+
+  test("un token inventado, manipulado, caducado o de otra carpeta, usuario o workspace se rechaza", async () => {
+    const { token } = await (await open({ name: "a.mp4", size: 20 })).json();
+    const claims = verifyUpload(token);
+    const forged = signUpload({ ...claims, s: 5 }).split(".")[0] + "." + token.split(".")[1];
+    const expired = signUpload(claims, { ttlMs: -1000 });
+    const otherFolder = signUpload({ ...claims, f: "fOpen" });
+    for (const bad of ["inventado", forged, expired, otherFolder, "", "a.b"]) {
+      expect((await put(bad, 0, make(20))).status).toBe(400);
+      expect((await finish(bad)).status).toBe(400);
+      expect((await abort(bad)).status).toBe(400);
+    }
+    // El token de un usuario no sirve a otro, aunque sea del mismo workspace...
+    as(users.adminA);
+    expect((await put(token, 0, make(20))).status).toBe(400);
+    // ...ni a uno de otro workspace.
+    as(users.ownerB);
+    expect((await put(token, 0, make(20))).status).toBe(400);
+    expect(Object.keys(storedFiles)).toEqual([]);
+  });
+
+  test("el permiso se vuelve a comprobar en cada parte: un editor degradado a viewer no puede seguir", async () => {
+    const { token } = await (await open({ name: "a.mp4", size: 20 })).json();
+    store.workspace_members.mEditorA.role = "viewer";
+    expect((await put(token, 0, make(20))).status).toBe(403);
+    expect((await finish(token)).status).toBe(403);
+  });
+
+  test("cancelar borra las partes subidas y no toca nada más; ya completada no se puede cancelar", async () => {
+    const { token } = await (await open({ name: "a.mp4", size: PART + 10 })).json();
+    await put(token, 0, make(PART));
+    expect(Object.keys(storedFiles)).toHaveLength(1);
+    expect((await abort(token)).status).toBe(200);
+    expect(Object.keys(storedFiles)).toEqual([]);
+
+    const whole = await uploadWhole(make(30));
+    expect((await abort(whole.token)).status).toBe(409);
+    expect(Object.keys(storedFiles)).toHaveLength(1);
+  });
+
+  test("descarga: el archivo completo llega byte a byte igual, como adjunto y con nosniff", async () => {
+    const { doc, content } = await uploadWhole(make(PART * 2 + MB));
+    const res = await get(doc.$id);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-length")).toBe(String(content.length));
+    expect(res.headers.get("content-disposition")).toStartWith("attachment;");
+    expect(res.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(res.headers.get("accept-ranges")).toBe("bytes");
+    expect(Buffer.from(await res.arrayBuffer()).equals(content)).toBe(true);
+  });
+
+  test("Range: un tramo que cruza dos partes, un sufijo, un tramo abierto y uno imposible", async () => {
+    const { doc, content } = await uploadWhole(make(PART * 2 + MB));
+    const slice = async (range) => { const res = await get(doc.$id, { range }); return { res, bytes: Buffer.from(await res.arrayBuffer()) }; };
+
+    const cross = await slice(`bytes=${PART - 4}-${PART + 5}`);
+    expect(cross.res.status).toBe(206);
+    expect(cross.res.headers.get("content-range")).toBe(`bytes ${PART - 4}-${PART + 5}/${content.length}`);
+    expect(cross.res.headers.get("content-length")).toBe("10");
+    expect(cross.bytes.equals(content.subarray(PART - 4, PART + 6))).toBe(true);
+
+    const tail = await slice("bytes=-100");
+    expect(tail.res.status).toBe(206);
+    expect(tail.bytes.equals(content.subarray(content.length - 100))).toBe(true);
+
+    const open = await slice(`bytes=${PART * 2}-`);
+    expect(open.bytes.length).toBe(MB);
+
+    const impossible = await get(doc.$id, { range: `bytes=${content.length + 5}-` });
+    expect(impossible.status).toBe(416);
+    expect(impossible.headers.get("content-range")).toBe(`bytes */${content.length}`);
+  });
+
+  test("?inline=1 muestra fotos y vídeo dentro de la página, con sandbox; el resto sigue siendo descarga", async () => {
+    const video = (await uploadWhole(make(50), { name: "gol.mp4", type: "video/mp4" })).doc;
+    const inline = await get(video.$id, { query: "?inline=1" });
+    expect(inline.headers.get("content-type")).toBe("video/mp4");
+    expect(inline.headers.get("content-disposition")).toStartWith("inline;");
+    expect(inline.headers.get("content-security-policy")).toBe("sandbox");
+
+    const html = (await uploadWhole(make(50), { name: "trampa.html", type: "text/html" })).doc;
+    const blocked = await get(html.$id, { query: "?inline=1" });
+    expect(blocked.headers.get("content-disposition")).toStartWith("attachment;");
+    expect(blocked.headers.get("content-security-policy")).toBeNull();
+    expect(blocked.headers.get("x-content-type-options")).toBe("nosniff");
+
+    const svg = (await uploadWhole(make(50), { name: "x.svg", type: "image/svg+xml" })).doc;
+    expect((await get(svg.$id, { query: "?inline=1" })).headers.get("content-disposition")).toStartWith("attachment;");
+
+    // Sin ?inline=1 un vídeo también se descarga.
+    expect((await get(video.$id)).headers.get("content-disposition")).toStartWith("attachment;");
+  });
+
+  test("los archivos anteriores (un solo binario) siguen descargándose", async () => {
+    const res = await get("dA");
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("contenido");
+    expect(storageCalls.downloaded).toEqual(["binA"]);
+  });
+
+  test("descargar exige acceso: carpeta ajena o restringida y archivo de otra carpeta son 404", async () => {
+    const { doc } = await uploadWhole(make(20));
+    expect((await get(doc.$id, { id: "fOpen" })).status).toBe(404);
+    as(users.ownerB);
+    expect((await get(doc.$id)).status).toBe(404);
+    as(users.editorA);
+    expect((await get("dSecret", { id: "fSecret" })).status).toBe(404);
+  });
+
+  test("borrar un archivo elimina TODAS sus partes y la fila; un viewer no puede", async () => {
+    const { doc } = await uploadWhole(make(PART * 2 + 5));
+    const ids = store.documents[doc.$id].partIds;
+    as(users.viewerA);
+    expect((await file.DELETE(json("DELETE"), params({ id: "fA", fileId: doc.$id }))).status).toBe(403);
+    expect(ids.every((id) => storedFiles[id])).toBe(true);
+    as(users.editorA);
+    expect((await file.DELETE(json("DELETE"), params({ id: "fA", fileId: doc.$id }))).status).toBe(204);
+    expect(ids.some((id) => storedFiles[id])).toBe(false);
+    expect(store.documents[doc.$id]).toBeUndefined();
+  });
+
+  test("borrar una carpeta elimina también las partes de sus archivos", async () => {
+    const { doc } = await uploadWhole(make(PART + 5));
+    const ids = store.documents[doc.$id].partIds;
+    expect((await folder.DELETE(json("DELETE"), params({ id: "fA" }))).status).toBe(200);
+    expect(ids.some((id) => storedFiles[id])).toBe(false);
+    expect(store.documents[doc.$id]).toBeUndefined();
+    expect(storageCalls.deleted).toEqual(expect.arrayContaining(["binA", ...ids]));
+  });
+
+  test("dos subidas a la vez no se mezclan", async () => {
+    const [a, b] = await Promise.all([uploadWhole(make(PART + 100), { name: "a.mp4", type: "video/mp4" }), uploadWhole(make(PART + 200), { name: "b.mp4", type: "video/mp4" })]);
+    const readBack = async (doc) => Buffer.from(await (await get(doc.$id)).arrayBuffer());
+    expect((await readBack(a.doc)).equals(a.content)).toBe(true);
+    expect((await readBack(b.doc)).equals(b.content)).toBe(true);
+  });
+});
+
+describe("subida por partes: endurecimiento", () => {
+  beforeEach(seed);
+  const open = (body) => files.POST(json("POST", body), params({ id: "fA" }));
+  const put = (token, index, bytes, headers = {}) => upload.PUT(new Request(`https://app.test/api?part=${index}`, { method: "PUT", headers: { "x-upload-token": token, ...headers }, body: bytes }), params({ id: "fA" }));
+  const finish = (token) => upload.POST(new Request("https://app.test/api", { method: "POST", headers: { "x-upload-token": token } }), params({ id: "fA" }));
+  const bytes = (length) => Buffer.alloc(length, 7);
+
+  test("con la subida ya cerrada, el mismo token no puede reescribir ni resucitar partes", async () => {
+    const { token } = await (await open({ name: "a.mp4", size: 20 })).json();
+    await put(token, 0, bytes(20));
+    const { file: doc } = await (await finish(token)).json();
+    const before = Buffer.from(storedFiles[store.documents[doc.$id].partIds[0]]);
+    expect((await put(token, 0, Buffer.alloc(20, 9))).status).toBe(409);
+    expect(storedFiles[store.documents[doc.$id].partIds[0]].equals(before)).toBe(true);
+  });
+
+  test("si el documento se borra después, el token tampoco puede volver a subir partes huérfanas... salvo reabrir, y cerrar lo recrea una sola vez", async () => {
+    const { token } = await (await open({ name: "a.mp4", size: 20 })).json();
+    await put(token, 0, bytes(20));
+    const { file: doc } = await (await finish(token)).json();
+    await file.DELETE(json("DELETE"), params({ id: "fA", fileId: doc.$id }));
+    expect(Object.keys(storedFiles)).toEqual([]);
+    // Con el documento borrado el token sigue vivo hasta que caduque: lo peor que puede hacer su dueño
+    // es volver a subir lo suyo y cerrar, y queda exactamente un documento (mismo id), no duplicados.
+    await put(token, 0, bytes(20));
+    expect((await finish(token)).status).toBe(201);
+    expect(Object.values(store.documents).filter((row) => row.name === "a.mp4")).toHaveLength(1);
+  });
+
+  test("la longitud declarada se comprueba antes de leer el cuerpo", async () => {
+    const { token } = await (await open({ name: "a.mp4", size: 20 })).json();
+    expect((await put(token, 0, bytes(20), { "content-length": "999999999" })).status).toBe(413);
+    expect((await put(token, 0, bytes(20), { "content-length": "5" })).status).toBe(400);
+    expect(Object.keys(storedFiles)).toEqual([]);
+    expect((await put(token, 0, bytes(20), { "content-length": "20" })).status).toBe(200);
+  });
+
+  test("cerrar dos veces a la vez no da 500: ambos devuelven el mismo documento", async () => {
+    const { token } = await (await open({ name: "a.mp4", size: 20 })).json();
+    await put(token, 0, bytes(20));
+    const results = await Promise.all([finish(token), finish(token)]);
+    expect(results.map((res) => res.status).sort()).not.toContain(500);
+    const ids = await Promise.all(results.map(async (res) => (await res.json()).file.$id));
+    expect(new Set(ids).size).toBe(1);
+    expect(Object.values(store.documents).filter((row) => row.name === "a.mp4")).toHaveLength(1);
+  });
+
+  test("un nombre con un sustituto UTF-16 suelto se sanea y el archivo se puede descargar", async () => {
+    const { token } = await (await open({ name: "gol\ud800.mp4", size: 20 })).json();
+    expect(verifyUpload(token).n.isWellFormed()).toBe(true);
+    await put(token, 0, bytes(20));
+    const { file: doc } = await (await finish(token)).json();
+    const res = await file.GET(new Request("https://app.test/api"), params({ id: "fA", fileId: doc.$id }));
+    expect(res.status).toBe(200);
+  });
+
+  test("la lista de todos los archivos tampoco filtra ids internos de Storage", async () => {
+    const { token } = await (await open({ name: "a.mp4", size: 20 })).json();
+    await put(token, 0, bytes(20));
+    await finish(token);
+    const body = await (await allFiles.GET()).json();
+    const mine = body.files.find((item) => item.name === "a.mp4");
+    expect(mine).toMatchObject({ folderName: "Carpeta A", downloadUrl: expect.stringContaining("/files/"), size: 20 });
+    expect(mine.partIds).toBeUndefined();
+    expect(mine.storageFileId).toBeUndefined();
+    expect(JSON.stringify(body)).not.toContain("binA");
+  });
+});
+
+describe("archivos antiguos (un solo binario): Range", () => {
+  beforeEach(seed);
+  const get = (range) => file.GET(new Request("https://app.test/api", { headers: range ? { range } : {} }), params({ id: "fA", fileId: "dA" }));
+
+  test("sin Range: 200 con todo el contenido y su Content-Length", async () => {
+    const res = await get();
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-length")).toBe("9");
+    expect(await res.text()).toBe("contenido");
+  });
+
+  test("con Range: 206, Content-Range y solo los bytes pedidos (Safari lo exige para reproducir vídeo)", async () => {
+    const res = await get("bytes=2-4");
+    expect(res.status).toBe(206);
+    expect(res.headers.get("content-range")).toBe("bytes 2-4/9");
+    expect(res.headers.get("content-length")).toBe("3");
+    expect(await res.text()).toBe("nte");
+    expect(await (await get("bytes=-3")).text()).toBe("ido");
+    expect(await (await get("bytes=6-")).text()).toBe("ido");
+  });
+
+  test("un Range imposible es 416", async () => {
+    const res = await get("bytes=50-");
+    expect(res.status).toBe(416);
+    expect(res.headers.get("content-range")).toBe("bytes */9");
   });
 });

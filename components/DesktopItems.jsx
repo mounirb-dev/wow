@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Download, FolderOpen, Lock, Pencil, Trash2 } from "lucide-react";
+import { Download, Eye, FolderOpen, Lock, Pencil, Trash2 } from "lucide-react";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
-import { formatDate, kindLabel } from "@/lib/files.js";
+import { formatDate, formatSize, kindLabel, previewKind } from "@/lib/files.js";
 import { itemClass } from "./desktop-styles.js";
 import { MacFileIcon, MacFolderIcon } from "./MacIcons.jsx";
 
@@ -58,17 +58,21 @@ export function FolderItem({ folder, list, selected, renaming, canEdit, canConfi
   </ContextMenu>;
 }
 
-// Archivo del escritorio: doble clic/Enter descarga; el menú permite descargar y (editor+) eliminar.
-export function FileItem({ file, list, selected, canEdit, onSelect, onDownload, onRemove }) {
+// Archivo del escritorio: doble clic/Enter lo abre (foto, vídeo y audio se ven en una vista previa; el
+// resto se descarga); el menú permite ver, descargar y (editor+) eliminar.
+export function FileItem({ file, list, selected, canEdit, onSelect, onPreview, onDownload, onRemove }) {
+  const previewable = previewKind(file) !== null;
+  const open = previewable ? onPreview : onDownload;
   return <ContextMenu>
     <ContextMenuTrigger asChild>
-      <button type="button" onClick={(event) => select(event, onSelect)} onDoubleClick={onDownload} onKeyDown={(event) => { if (event.key === "Enter") onDownload(); }} className={`${itemClass(selected)} ${list ? rowClass : ""}`} aria-label={`Archivo ${file.name}`}>
+      <button type="button" onClick={(event) => select(event, onSelect)} onDoubleClick={open} onKeyDown={(event) => { if (event.key === "Enter") open(); }} className={`${itemClass(selected)} ${list ? rowClass : ""}`} aria-label={`Archivo ${file.name}`}>
         {list
-          ? <><MacFileIcon name={file.name} className="h-7 w-6" /><span className="min-w-0 flex-1 truncate text-left text-sm">{file.name}</span><span className="hidden w-40 text-left text-xs text-muted-foreground sm:block">{kindLabel(file.name)}</span><span className="hidden w-28 text-left text-xs text-muted-foreground md:block">{formatDate(file.$createdAt)}</span></>
+          ? <><MacFileIcon name={file.name} className="h-7 w-6" /><span className="min-w-0 flex-1 truncate text-left text-sm">{file.name}</span><span className="hidden w-40 text-left text-xs text-muted-foreground sm:block">{kindLabel(file.name)}</span><span className="hidden w-20 text-left text-xs text-muted-foreground sm:block">{formatSize(file.size)}</span><span className="hidden w-28 text-left text-xs text-muted-foreground md:block">{formatDate(file.$createdAt)}</span></>
           : <><MacFileIcon name={file.name} className="h-16" /><span className={labelClass(selected)}>{file.name}</span></>}
       </button>
     </ContextMenuTrigger>
     <ContextMenuContent>
+      {previewable && <ContextMenuItem onSelect={onPreview}><Eye />Ver</ContextMenuItem>}
       <ContextMenuItem onSelect={onDownload}><Download />Descargar</ContextMenuItem>
       {canEdit && <><ContextMenuSeparator /><ContextMenuItem variant="destructive" onSelect={onRemove}><Trash2 />Eliminar</ContextMenuItem></>}
     </ContextMenuContent>

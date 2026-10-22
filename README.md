@@ -4,6 +4,9 @@ Workspace para gestionar una cartera de fútbol, negociaciones, documentos y cri
 
 - **Cartera:** cada jugador con valor, evolución, vencimiento de contrato y *palanca* (0-100: cuánta fuerza tienes para negociar ahora).
 - **Simulador de negociación:** eliges club y salario; ves probabilidad de cierre y comisión esperada, y calculas la petición óptima.
+- **Jugadores:** añadir y borrar desde la interfaz o el MCP (`add_player`, `delete_player` con `confirm: true`), y editar teléfono, email, ubicación y representante desde la ficha.
+- **Staff:** comentarios y valoraciones compartidas entre los miembros del workspace (Negociaciones → "Mi valoración").
+- **Archivos:** carpetas con acceso restringible; subida de fotos, vídeos y cualquier archivo por partes (hasta `MAX_UPLOAD_MB`, 1024 por defecto), vista previa de fotos, vídeo y audio, y borrado de carpetas con clic derecho.
 - **MCP:** las mismas herramientas disponibles para Claude Desktop u otros clientes MCP.
 - **Backend:** Appwrite sobre **PostgreSQL**, con migraciones versionadas, Appwrite Storage y login con Google/Apple.
 
@@ -38,6 +41,8 @@ bun run appwrite:configure
 # 5. Arranca la app
 bun run dev
 ```
+
+> Las migraciones `014_folder_access`, `015_player_contact` y `016_document_parts` son nuevas y aún no están aplicadas en ningún Appwrite: ejecuta `bun run db:migrate`. **En producción no lo hagas a ciegas**: el ledger remoto usa otros nombres y el runner intentaría reaplicar todo. Sigue [`docs/production-appwrite.md`](docs/production-appwrite.md).
 
 Abre <http://localhost:3000> y entra con una cuenta real de Appwrite.
 La consola de Appwrite está en <http://localhost:8080> (`admin@agentsolver.local` / `AgentSolver#2026!`, solo para desarrollo local).
@@ -74,8 +79,6 @@ Probar en local: `bunx @modelcontextprotocol/inspector` y apuntar a `http://loca
 
 > El antiguo servidor `stdio` (`bun run mcp`) se eliminó: no tenía sesión de usuario y no podía saber de qué workspace leer.
 
-Herramientas: `list_clients`, `portfolio_summary`, `valuation`, `negotiation_brief`. Leen de la misma base de datos que la web.
-
 ## Scripts
 
 | Comando | Qué hace |
@@ -86,7 +89,8 @@ Herramientas: `list_clients`, `portfolio_summary`, `valuation`, `negotiation_bri
 | `bun run appwrite:up` / `appwrite:down` | Arranca / para el stack ya instalado |
 | `bun run appwrite:bootstrap` | Admin + proyecto + API key → `.env.local` |
 | `bun run appwrite:configure` | Plataforma web y Google OAuth (si hay credenciales) |
-| `bun run db:migrate` | Aplica migraciones pendientes (idempotente) |
+| `bun run db:migrate` | Aplica migraciones pendientes (idempotente; ver aviso de producción arriba) |
+| `bun run news:sync` | Refresca las noticias a mano (también se refrescan al abrir la bandeja) |
 | `bun test` | Tests unitarios y de integración |
 | `bun run verify` | Puerta de calidad completa (ver abajo) |
 

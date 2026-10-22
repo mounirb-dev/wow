@@ -7,6 +7,7 @@ import { Query } from "node-appwrite";
 import { DB, listAll } from "@/lib/appwrite.js";
 import { chunk, mapLimit } from "@/lib/async.js";
 import { revalidateFoldersCache } from "@/lib/cache-tags.js";
+import { binaryIds } from "@/lib/document-files.js";
 import { accessibleFolderIds, canConfigureAccess, descendantIds, sanitizeAllowedUserIds } from "@/lib/folder-access.js";
 import { deleteFile } from "@/lib/storage.js";
 import { canEdit, getFolder, getWorkspaceContext, loadAllFolders } from "@/lib/workspace.js";
@@ -72,7 +73,7 @@ export async function DELETE(_request, { params }) {
   const pages = await Promise.all(chunk(branch).map((ids) => listAll(context.db, "documents", [Query.equal("workspaceId", context.workspace.$id), Query.equal("folderId", ids)])));
   const documents = pages.flat();
   await mapLimit(documents, 10, async (document) => {
-    await dropBinary(document.storageFileId);
+    await mapLimit(binaryIds(document), 8, dropBinary);
     await context.db.deleteRow(DB, "documents", document.$id);
   });
   await mapLimit(branch, 10, (folderId) => context.db.deleteRow(DB, "folders", folderId));

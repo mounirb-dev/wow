@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { Query } from "node-appwrite";
 import { listAll } from "@/lib/appwrite.js";
+import { publicFile } from "@/lib/document-files.js";
 import { getWorkspaceContext, listFolders } from "@/lib/workspace.js";
 
 export async function GET() {
@@ -19,6 +20,6 @@ export async function GET() {
   const documents = await listAll(context.db, "documents", [Query.equal("workspaceId", context.workspace.$id), Query.orderDesc("$createdAt")]);
   const files = documents
     .filter((document) => byId.has(document.folderId))
-    .map((document) => ({ ...document, folderName: byId.get(document.folderId).name, folderPath: pathOf(byId.get(document.folderId)), downloadUrl: `/api/workspace/folders/${document.folderId}/files/${document.$id}` }));
+    .map((document) => ({ ...publicFile(document.folderId, document), folderName: byId.get(document.folderId).name, folderPath: pathOf(byId.get(document.folderId)) }));
   return NextResponse.json({ files });
 }

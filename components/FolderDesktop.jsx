@@ -9,6 +9,7 @@ import { useFolderFiles } from "@/lib/use-folder-files.js";
 import { useSubfolders } from "@/lib/use-subfolders.js";
 import DeleteFolderDialog from "./DeleteFolderDialog.jsx";
 import DesktopContent from "./DesktopContent.jsx";
+import FilePreviewDialog from "./FilePreviewDialog.jsx";
 import { DesktopActions, DesktopTitle, DesktopViewControls } from "./DesktopToolbar.jsx";
 import FolderAccessDialog from "./FolderAccessDialog.jsx";
 
@@ -23,11 +24,12 @@ export default function FolderDesktop({ folderId, name, canEdit, canCreateFolder
   const isRoot = folderId == null;
   const canUpload = canEdit && !isRoot;
   const { folders, createFolder, renameFolder, removeFolder, patchFolder } = useSubfolders({ parentId: folderId ?? null, initialFolders, refresh: () => router.refresh() });
-  const { files, loading, uploading, upload, removeFile } = useFolderFiles(folderId);
+  const { files, loading, uploading, progress, upload, removeFile } = useFolderFiles(folderId);
   const { dragging, dropProps } = useFileDrop(canUpload, upload);
   const [currentAccess, setCurrentAccess] = useState({ restricted: Boolean(current?.restricted), allowedUserIds: current?.allowedUserIds ?? [] });
   const [accessTarget, setAccessTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [previewFile, setPreviewFile] = useState(null);
   const [view, setView] = useState("grid");
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(null);
@@ -44,6 +46,7 @@ export default function FolderDesktop({ folderId, name, canEdit, canCreateFolder
     startRename: setRenaming,
     openAccess: setAccessTarget,
     askDelete: setDeleteTarget,
+    preview: setPreviewFile,
     removeFile,
     openFolder: (id) => (onOpenFolder ? onOpenFolder(id) : router.push(`/folders/${id}`)),
     download: (file) => { window.location.href = downloadPath(file); },
@@ -86,7 +89,7 @@ export default function FolderDesktop({ folderId, name, canEdit, canCreateFolder
         onAccess={mayConfigure(current) ? () => setAccessTarget({ ...current, name, ...currentAccess }) : null}
       />
       <DesktopViewControls query={query} onQuery={setQuery} view={view} onView={setView} />
-      {canEdit && <DesktopActions onNewFolder={canCreateFolders ? () => { setCreating(true); setView("grid"); setSelected(null); } : null} onPickFiles={canUpload ? () => fileInput.current?.click() : null} uploading={uploading} />}
+      {canEdit && <DesktopActions onNewFolder={canCreateFolders ? () => { setCreating(true); setView("grid"); setSelected(null); } : null} onPickFiles={canUpload ? () => fileInput.current?.click() : null} uploading={uploading} progress={progress} />}
       {canUpload && <input ref={fileInput} type="file" multiple className="sr-only" tabIndex={-1} aria-hidden="true" onChange={(event) => { upload(event.target.files); event.target.value = ""; }} />}
     </header>
     <div
@@ -114,6 +117,7 @@ export default function FolderDesktop({ folderId, name, canEdit, canCreateFolder
       />
     </div>
     <FolderAccessDialog folder={accessTarget} onClose={() => setAccessTarget(null)} onSaved={accessSaved} />
+    <FilePreviewDialog file={previewFile} onClose={() => setPreviewFile(null)} />
     <DeleteFolderDialog folder={deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={confirmDelete} />
   </section>;
 }

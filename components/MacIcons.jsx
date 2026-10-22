@@ -19,7 +19,9 @@ const kinds = [
   { match: /^(pdf)$/, color: "#e5484d" },
   { match: /^(xls|xlsx|csv|numbers)$/, color: "#2f9e5b" },
   { match: /^(doc|docx|pages|rtf)$/, color: "#3b82f6" },
-  { match: /^(png|jpe?g|webp|gif|heic|svg)$/, color: "#8b5cf6" },
+  { match: /^(png|jpe?g|webp|gif|heic|avif|svg)$/, color: "#8b5cf6" },
+  { match: /^(mp4|m4v|mov|webm|avi|mkv)$/, color: "#ec4899" },
+  { match: /^(mp3|m4a|wav|ogg|flac)$/, color: "#f59e0b" },
 ];
 
 export function MacFileIcon({ name, className = "w-12" }) {

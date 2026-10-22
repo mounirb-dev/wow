@@ -32,9 +32,10 @@ export function DesktopViewControls({ query, onQuery, view, onView }) {
 }
 
 // Acciones de escritura (editor+): nueva carpeta y añadir archivos. Cada una es opcional.
-export function DesktopActions({ onNewFolder, onPickFiles, uploading }) {
+// `progress` (0 a 1) se muestra mientras se sube.
+export function DesktopActions({ onNewFolder, onPickFiles, uploading, progress = null }) {
   return <>
     {onNewFolder && <Button variant="outline" size="sm" onClick={onNewFolder}><FolderPlus data-icon="inline-start" />Nueva carpeta</Button>}
-    {onPickFiles && <Button size="sm" disabled={uploading} onClick={onPickFiles}><FilePlus data-icon="inline-start" />{uploading ? "Guardando…" : "Añadir archivo"}</Button>}
+    {onPickFiles && <Button size="sm" disabled={uploading} onClick={onPickFiles}><FilePlus data-icon="inline-start" />{uploading ? `Subiendo… ${Math.round((progress ?? 0) * 100)} %` : "Añadir archivo"}</Button>}
   </>;
 }

@@ -1,13 +1,18 @@
-// /api/workspace/folders/:id/files — GET lista los archivos; POST sube uno (<=25 MB, editor+).
-// El binario va a Appwrite Storage y los metadatos a la tabla `documents`; si falla el segundo
-// paso se borra el binario para no dejar archivos huérfanos.
+// /api/workspace/folders/:id/files — GET lista los archivos; POST abre una subida (editor+).
+// La subida va por partes (ver lib/upload-limits.js): POST valida el archivo y devuelve un token
+// firmado; las partes y el cierre van a ./upload (ver upload/route.js).
 import { NextResponse } from "next/server";
 import { ID, Query } from "node-appwrite";
 import { DB } from "@/lib/appwrite.js";
-import { deleteFile, uploadFile } from "@/lib/storage.js";
+import { publicFile } from "@/lib/document-files.js";
+import { PART_SIZE, maxUploadBytes, partCount } from "@/lib/upload-limits.js";
+import { signUpload } from "@/lib/upload-token.js";
 import { canEdit, findFolder, getWorkspaceContext } from "@/lib/workspace.js";
 
-const MAX_FILE_SIZE = 25 * 1024 * 1024;
+// Nombre de archivo seguro: sin separadores de ruta ni caracteres de control, <= 255.
+const cleanName = (value) => String(value ?? "").toWellFormed().replace(/[\\/\u0000-\u001f]/g, "_").trim().slice(0, 255);
+// Tipo MIME declarado por el navegador; si no tiene forma de tipo, octet-stream. Solo es una pista.
+const cleanType = (value) => (/^[\w.+-]+\/[\w.+-]+$/.test(String(value ?? "")) ? String(value).slice(0, 127) : "application/octet-stream");
 
 export async function GET(request, { params }) {
   const context = await getWorkspaceContext();
@@ -21,7 +26,7 @@ export async function GET(request, { params }) {
     Query.orderDesc("$createdAt"),
     Query.limit(100),
   ]);
-  return NextResponse.json({ files: rows.map((file) => ({ ...file, downloadUrl: `/api/workspace/folders/${folderId}/files/${file.$id}` })) });
+  return NextResponse.json({ files: rows.map((file) => publicFile(folderId, file)) });
 }
 
 export async function POST(request, { params }) {
@@ -31,26 +36,14 @@ export async function POST(request, { params }) {
   const { id: folderId } = await params;
   if (!(await findFolder(context, folderId))) return NextResponse.json({ error: "Carpeta no encontrada" }, { status: 404 });
 
-  const formData = await request.formData();
-  const file = formData.get("file");
-  if (!(file instanceof File) || !file.name) return NextResponse.json({ error: "Falta el archivo" }, { status: 400 });
-  if (file.size > MAX_FILE_SIZE) return NextResponse.json({ error: "El archivo supera el límite de 25 MB" }, { status: 413 });
+  const body = await request.json().catch(() => ({}));
+  const name = cleanName(body.name);
+  const size = Number(body.size);
+  if (!name) return NextResponse.json({ error: "Falta el nombre del archivo" }, { status: 400 });
+  if (!Number.isInteger(size) || size < 1) return NextResponse.json({ error: "El archivo está vacío o su tamaño no es válido" }, { status: 400 });
+  const limit = maxUploadBytes();
+  if (size > limit) return NextResponse.json({ error: `El archivo supera el límite de ${Math.round(limit / 1024 / 1024)} MB` }, { status: 413 });
 
-  const storageFileId = ID.unique();
-  try {
-    await uploadFile(storageFileId, Buffer.from(await file.arrayBuffer()), file.name);
-    const document = await context.db.createRow(DB, "documents", ID.unique(), {
-      workspaceId: context.workspace.$id,
-      folderId,
-      name: file.name.slice(0, 255),
-      mimeType: file.type || "application/octet-stream",
-      storageFileId,
-      createdBy: context.user.$id,
-    });
-    return NextResponse.json({ file: { ...document, downloadUrl: `/api/workspace/folders/${folderId}/files/${document.$id}` } }, { status: 201 });
-  } catch (error) {
-    try { await deleteFile(storageFileId); } catch { /* Keep the original error. */ }
-    console.error("workspace file upload failed", error);
-    return NextResponse.json({ error: "No se pudo guardar el archivo" }, { status: 500 });
-  }
+  const token = signUpload({ d: ID.unique(), f: folderId, u: context.user.$id, w: context.workspace.$id, n: name, s: size, t: cleanType(body.type) });
+  return NextResponse.json({ token, partSize: PART_SIZE, parts: partCount(size) }, { status: 201 });
 }
