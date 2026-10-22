@@ -50,7 +50,7 @@ Cada punto se mira en la pantalla **y** en el servidor/Storage.
 ### Jugadores
 1. «Añadir jugador» crea el jugador; aparece en la lista.
 2. «Editar jugador»: un teléfono inválido (`llámame`) muestra el aviso «El teléfono no es válido» y **no guarda nada**; con datos válidos aparecen en «Contacto y representación» con enlaces `tel:` y `mailto:` (el email se guarda en minúsculas).
-3. «Borrar jugador» pide confirmación, vuelve a la lista y no quedan valoraciones ni noticias del jugador.
+3. «Borrar» (papelera animada, en el listado y en la ficha): un clic la abre con ✓ y ✕, ✓ borra y vuelve a la lista, ✕ o Escape cancelan; no quedan valoraciones ni noticias del jugador. Si el borrado falla, avisa y no muestra el ✓.
 
 ### Valoraciones y comentarios del staff
 1. En Negociaciones, «Mi valoración» guarda estado y nota («Guardado para el workspace») y la tarjeta se actualiza al instante (`Equipo: 1 a favor`).
