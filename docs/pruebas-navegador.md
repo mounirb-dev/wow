@@ -23,6 +23,10 @@ Guía para comprobar a mano, con el **navegador integrado de Claude**, lo que lo
 
 Cada punto se mira en la pantalla **y** en el servidor/Storage.
 
+### Conectar la IA
+1. «Conectar mi IA» (barra lateral) abre el modal: la dirección es `<origen>/mcp` y se copia con un clic; en local avisa de que Claude y ChatGPT no pueden llegar a localhost.
+2. Las pestañas Claude y ChatGPT enseñan 4 pasos cada una y «Abrir …» abre `claude.ai/customize/connectors` o `chatgpt.com/plugins` en otra pestaña. Los menús de cada asistente cambian: revisa la documentación oficial si algún paso no coincide.
+
 ### Acceso por invitación
 1. Una cuenta sin invitación que inicia sesión llega a `/acceso` («Todavía no tienes acceso») y no ve datos; `/api/workspace/files` responde 401. Se puede probar creando un usuario de prueba en el Appwrite local (borra después el usuario y las filas que cree el alta).
 2. **Email de onboarding**: `bun run club:invite -- email "Club"` (o invitar desde «Compartir workspace») deja un email en Mailpit (`http://localhost:8025`) con un enlace a `/onboarding`; el formulario valida nombre, contraseña (mín. 8) y que coincidan, crea la cuenta y entra al workspace; el mismo enlace una segunda vez da «Este enlace ya no vale»; después se puede entrar con email + contraseña. Si el email no sale, la invitación se crea y el aviso lo dice.

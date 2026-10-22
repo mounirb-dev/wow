@@ -7,6 +7,7 @@ import { ChevronDown, ChevronLeft, ChevronRight, Folder, FolderTree, GitCompare,
 import ClubPicker from "./ClubPicker.jsx";
 import ThemeToggle from "./ThemeToggle.jsx";
 import BrandLogo from "./BrandLogo.jsx";
+import ConnectAiDialog from "./ConnectAiDialog.jsx";
 import WorkspaceMembersPanel from "./WorkspaceMembersPanel.jsx";
 import { useUiStore } from "@/lib/ui-store.js";
 import { Button } from "@/components/ui/button";
@@ -130,7 +131,7 @@ function SidebarPanel({ mobile = false, onNavigate, workspace, canManage }) {
           {[{ href: "/", label: "Resumen", icon: LayoutDashboard }, ...navItems].filter((item) => matches(item.label, search)).map(link)}
         </nav>
       </div>
-      <div className="mt-4 min-w-0 border-t pt-3"><WorkspaceMembersPanel collapsed={collapsed} /></div>
+      <div className="mt-4 flex min-w-0 flex-col gap-1 border-t pt-3"><ConnectAiDialog collapsed={collapsed} /><WorkspaceMembersPanel collapsed={collapsed} /></div>
     </div>
   </aside>;
 }
