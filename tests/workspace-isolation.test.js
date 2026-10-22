@@ -135,7 +135,7 @@ const { addSuitor, removeSuitor, saveStaffSignal, updatePlayer } = await import(
 const { decisionMatrix } = await import("../lib/coach.js");
 const { loadPlayerStaffData, loadStaffDataByPlayer } = await import("../lib/staff-data.js");
 const { ownSignal, staffComments } = await import("../lib/staff-notes.js");
-const { loadAllNews, loadPlayerNews, refreshNewsIfStale } = await import("../lib/news-sync.js");
+const { loadAllNews, loadPlayerNews, refreshNewsIfStale, syncPlayerNews } = await import("../lib/news-sync.js");
 const { listFolders, resolveWorkspaceContext } = await import("../lib/workspace.js");
 const players = await import("../app/api/players/[id]/route.js");
 const playersRoot = await import("../app/api/players/route.js");
@@ -639,6 +639,21 @@ describe("refresco de noticias al entrar en la bandeja", () => {
     globalThis.fetch = async () => { calls++; if (calls === 1) throw new Error("sin red"); return new Response("<rss><channel></channel></rss>"); };
     try { await refreshNewsIfStale({ workspaceId: "ws-partial", players: [player, { ...player, id: "pY" }], items: stale }); } finally { globalThis.fetch = original; }
     expect(calls).toBe(2);
+  });
+});
+
+describe("sincronización de noticias con artículos fuera de los límites de columna", () => {
+  const item = (n, description) => `<item><title>Titular ${n}</title><link>https://news.example/${n}</link><description>${description}</description><pubDate>Thu, 22 Oct 2026 10:16:55 GMT</pubDate><source>Fuente</source></item>`;
+  test("recorta el resumen largo y guarda todos los artículos del jugador", async () => {
+    const original = globalThis.fetch;
+    globalThis.fetch = async () => new Response(`<rss><channel>${item(1, "x".repeat(5000))}${item(2, "corto")}</channel></rss>`);
+    let result;
+    try { result = await syncPlayerNews({ id: "pLong", name: "Jugador Largo", club: "Club" }); } finally { globalThis.fetch = original; }
+    expect(result).toEqual({ fetched: 2, inserted: 2 });
+    const saved = Object.values(store.news_items).filter((row) => row.playerId === "pLong");
+    expect(saved).toHaveLength(2);
+    expect(Math.max(...saved.map((row) => row.summary.length))).toBeLessThanOrEqual(2000);
+    for (const row of saved) delete store.news_items[row.$id];
   });
 });
 
