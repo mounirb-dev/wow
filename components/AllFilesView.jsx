@@ -5,7 +5,7 @@ import { Search } from "lucide-react";
 import { useAllFiles } from "@/lib/use-all-files.js";
 import { plural } from "@/lib/files.js";
 import AllFilesRow from "./AllFilesRow.jsx";
-import FilePreviewDialog from "./FilePreviewDialog.jsx";
+import FileViewer from "./FileViewer.jsx";
 import { MacFolderIcon } from "./MacIcons.jsx";
 
 // Todos los archivos del workspace (de las carpetas a las que el usuario puede entrar), con la
@@ -32,6 +32,6 @@ export default function AllFilesView({ onOpenFolder }) {
         {shown.map((file) => <AllFilesRow key={file.$id} file={file} onOpenFolder={onOpenFolder} onPreview={setPreviewFile} />)}
       </ul>
     </div>
-    <FilePreviewDialog file={previewFile} onClose={closePreview} />
+    <FileViewer file={previewFile} files={shown} onClose={closePreview} />
   </section>;
 }

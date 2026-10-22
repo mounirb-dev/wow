@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { binaryIds, parseRange, publicFile, streamParts } from "../lib/document-files.js";
-import { formatSize, inlineMime, previewKind } from "../lib/files.js";
+import { formatSize, formatTime, inlineMime, previewKind, viewableFiles } from "../lib/files.js";
 import { DEFAULT_MAX_UPLOAD_MB, PART_SIZE, maxUploadBytes, partCount, partId, partLength } from "../lib/upload-limits.js";
 import { signUpload, verifyUpload } from "../lib/upload-token.js";
 
@@ -159,5 +159,33 @@ describe("tipos: nombres con claves del prototipo", () => {
     expect(inlineMime({ name: "", mimeType: "" })).toBeNull();
     expect(inlineMime({})).toBeNull();
     expect(inlineMime(undefined)).toBeNull();
+  });
+});
+
+describe("viewableFiles", () => {
+  const list = [
+    { $id: "a", name: "foto.png", mimeType: "image/png" },
+    { $id: "b", name: "informe.pdf", mimeType: "application/pdf" },
+    { $id: "c", name: "gol.mp4", mimeType: "video/mp4" },
+    { $id: "d", name: "x.svg", mimeType: "image/svg+xml" },
+    { $id: "e", name: "voz.mp3", mimeType: "audio/mpeg" },
+  ];
+  test("deja solo foto, vídeo y audio, en el mismo orden", () => expect(viewableFiles(list).map((file) => file.$id)).toEqual(["a", "c", "e"]));
+  test("sin lista no lanza", () => {
+    expect(viewableFiles(undefined)).toEqual([]);
+    expect(viewableFiles([])).toEqual([]);
+  });
+});
+
+describe("formatTime", () => {
+  test("minutos y segundos, y horas cuando hacen falta", () => {
+    expect(formatTime(0)).toBe("0:00");
+    expect(formatTime(5)).toBe("0:05");
+    expect(formatTime(65.9)).toBe("1:05");
+    expect(formatTime(3600)).toBe("1:00:00");
+    expect(formatTime(3723)).toBe("1:02:03");
+  });
+  test("valores que no son un tiempo válido (NaN antes de cargar, Infinity en directos, negativos) son 0:00", () => {
+    for (const value of [NaN, Infinity, -3, undefined, null, "x"]) expect(formatTime(value)).toBe("0:00");
   });
 });

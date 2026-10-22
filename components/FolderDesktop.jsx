@@ -9,7 +9,7 @@ import { useFolderFiles } from "@/lib/use-folder-files.js";
 import { useSubfolders } from "@/lib/use-subfolders.js";
 import DeleteFolderDialog from "./DeleteFolderDialog.jsx";
 import DesktopContent from "./DesktopContent.jsx";
-import FilePreviewDialog from "./FilePreviewDialog.jsx";
+import FileViewer from "./FileViewer.jsx";
 import { DesktopActions, DesktopTitle, DesktopViewControls } from "./DesktopToolbar.jsx";
 import FolderAccessDialog from "./FolderAccessDialog.jsx";
 
@@ -117,7 +117,7 @@ export default function FolderDesktop({ folderId, name, canEdit, canCreateFolder
       />
     </div>
     <FolderAccessDialog folder={accessTarget} onClose={() => setAccessTarget(null)} onSaved={accessSaved} />
-    <FilePreviewDialog file={previewFile} onClose={() => setPreviewFile(null)} />
+    <FileViewer file={previewFile} files={files} onClose={() => setPreviewFile(null)} />
     <DeleteFolderDialog folder={deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={confirmDelete} />
   </section>;
 }

@@ -5,7 +5,8 @@ import { Download, Eye, FolderOpen, Lock, Pencil, Trash2 } from "lucide-react";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { formatDate, formatSize, kindLabel, previewKind } from "@/lib/files.js";
 import { itemClass } from "./desktop-styles.js";
-import { MacFileIcon, MacFolderIcon } from "./MacIcons.jsx";
+import { MacFolderIcon } from "./MacIcons.jsx";
+import MediaThumb from "./media/MediaThumb.jsx";
 
 const labelClass = (selected) => `line-clamp-2 max-w-full break-words rounded px-1.5 py-0.5 text-xs leading-tight ${selected ? "bg-primary text-primary-foreground" : ""}`;
 const rowClass = "!flex-row !gap-3 !text-left";
@@ -67,8 +68,8 @@ export function FileItem({ file, list, selected, canEdit, onSelect, onPreview, o
     <ContextMenuTrigger asChild>
       <button type="button" onClick={(event) => select(event, onSelect)} onDoubleClick={open} onKeyDown={(event) => { if (event.key === "Enter") open(); }} className={`${itemClass(selected)} ${list ? rowClass : ""}`} aria-label={`Archivo ${file.name}`}>
         {list
-          ? <><MacFileIcon name={file.name} className="h-7 w-6" /><span className="min-w-0 flex-1 truncate text-left text-sm">{file.name}</span><span className="hidden w-40 text-left text-xs text-muted-foreground sm:block">{kindLabel(file.name)}</span><span className="hidden w-20 text-left text-xs text-muted-foreground sm:block">{formatSize(file.size)}</span><span className="hidden w-28 text-left text-xs text-muted-foreground md:block">{formatDate(file.$createdAt)}</span></>
-          : <><MacFileIcon name={file.name} className="h-16" /><span className={labelClass(selected)}>{file.name}</span></>}
+          ? <><MediaThumb file={file} size="list" /><span className="min-w-0 flex-1 truncate text-left text-sm">{file.name}</span><span className="hidden w-40 text-left text-xs text-muted-foreground sm:block">{kindLabel(file.name)}</span><span className="hidden w-20 text-left text-xs text-muted-foreground sm:block">{formatSize(file.size)}</span><span className="hidden w-28 text-left text-xs text-muted-foreground md:block">{formatDate(file.$createdAt)}</span></>
+          : <><MediaThumb file={file} size="grid" /><span className={labelClass(selected)}>{file.name}</span></>}
       </button>
     </ContextMenuTrigger>
     <ContextMenuContent>
