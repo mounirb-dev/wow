@@ -3,26 +3,17 @@
 // paso se borra el binario para no dejar archivos huérfanos.
 import { NextResponse } from "next/server";
 import { ID, Query } from "node-appwrite";
-import { BUCKET_ID, DB, adminStorage } from "@/lib/appwrite.js";
-import { canEdit, getWorkspaceContext } from "@/lib/workspace.js";
+import { DB } from "@/lib/appwrite.js";
+import { deleteFile, uploadFile } from "@/lib/storage.js";
+import { canEdit, findFolder, getWorkspaceContext } from "@/lib/workspace.js";
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
-
-async function getFolder(context, folderId) {
-  try {
-    const folder = await context.db.getRow(DB, "folders", folderId);
-    return folder.workspaceId === context.workspace.$id ? folder : null;
-  } catch (error) {
-    if (error.code === 404) return null;
-    throw error;
-  }
-}
 
 export async function GET(request, { params }) {
   const context = await getWorkspaceContext();
   if (!context) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   const { id: folderId } = await params;
-  if (!(await getFolder(context, folderId))) return NextResponse.json({ error: "Carpeta no encontrada" }, { status: 404 });
+  if (!(await findFolder(context, folderId))) return NextResponse.json({ error: "Carpeta no encontrada" }, { status: 404 });
 
   const { rows } = await context.db.listRows(DB, "documents", [
     Query.equal("workspaceId", context.workspace.$id),
@@ -38,7 +29,7 @@ export async function POST(request, { params }) {
   if (!context) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   if (!canEdit(context.member)) return NextResponse.json({ error: "Tu rol solo permite consultar" }, { status: 403 });
   const { id: folderId } = await params;
-  if (!(await getFolder(context, folderId))) return NextResponse.json({ error: "Carpeta no encontrada" }, { status: 404 });
+  if (!(await findFolder(context, folderId))) return NextResponse.json({ error: "Carpeta no encontrada" }, { status: 404 });
 
   const formData = await request.formData();
   const file = formData.get("file");
@@ -47,7 +38,7 @@ export async function POST(request, { params }) {
 
   const storageFileId = ID.unique();
   try {
-    await adminStorage().createFile(BUCKET_ID, storageFileId, Buffer.from(await file.arrayBuffer()), []);
+    await uploadFile(storageFileId, Buffer.from(await file.arrayBuffer()), file.name);
     const document = await context.db.createRow(DB, "documents", ID.unique(), {
       workspaceId: context.workspace.$id,
       folderId,
@@ -58,7 +49,7 @@ export async function POST(request, { params }) {
     });
     return NextResponse.json({ file: { ...document, downloadUrl: `/api/workspace/folders/${folderId}/files/${document.$id}` } }, { status: 201 });
   } catch (error) {
-    try { await adminStorage().deleteFile(BUCKET_ID, storageFileId); } catch { /* Keep the original error. */ }
+    try { await deleteFile(storageFileId); } catch { /* Keep the original error. */ }
     console.error("workspace file upload failed", error);
     return NextResponse.json({ error: "No se pudo guardar el archivo" }, { status: 500 });
   }

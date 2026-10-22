@@ -2,9 +2,11 @@
 // antes de tocar el almacenamiento.
 import { NextResponse } from "next/server";
 import { BUCKET_ID, DB, adminStorage } from "@/lib/appwrite.js";
-import { canEdit, getWorkspaceContext } from "@/lib/workspace.js";
+import { canEdit, findFolder, getWorkspaceContext } from "@/lib/workspace.js";
 
 async function getDocument(context, folderId, fileId) {
+  // Sin acceso a la carpeta (restringida) tampoco hay acceso a sus archivos.
+  if (!(await findFolder(context, folderId))) return null;
   try {
     const document = await context.db.getRow(DB, "documents", fileId);
     return document.workspaceId === context.workspace.$id && document.folderId === folderId ? document : null;

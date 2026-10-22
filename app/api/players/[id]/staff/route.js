@@ -14,6 +14,9 @@ export async function PATCH(request, { params }) {
   if (!context) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   if (!canEdit(context.member)) return NextResponse.json({ error: "Tu rol solo permite consultar" }, { status: 403 });
   const [{ id: playerId }, body] = await Promise.all([params, request.json()]);
+  // Sin esta comprobación se podrían escribir valoraciones sobre jugadores de otro workspace.
+  const player = await context.db.getRow(DB, "players", playerId).catch((error) => { if (error.code === 404) return null; throw error; });
+  if (!player || player.workspaceId !== context.workspace.$id) return NextResponse.json({ error: "Jugador no encontrado en este workspace" }, { status: 404 });
   const interest = interests.has(body.interest) ? body.interest : "pending";
   const notes = String(body.notes ?? "").trim().slice(0, 4000) || null;
   const rowId = `signal_${createHash("sha256").update(`${playerId}:${context.user.$id}`).digest("hex").slice(0, 29)}`;

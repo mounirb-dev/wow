@@ -1,46 +1,30 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import PageHeader from "@/components/PageHeader.jsx";
 import { requireUser } from "@/lib/session.js";
 import WorkspaceShell from "@/components/WorkspaceShell.jsx";
-import FolderFiles from "@/components/FolderFiles.jsx";
-import FolderManager from "@/components/FolderManager.jsx";
-import { getWorkspaceContext, listFolders } from "@/lib/workspace.js";
+import FolderDesktop from "@/components/FolderDesktop.jsx";
+import { canEdit, getWorkspaceContext, listFolders, loadAllFolders } from "@/lib/workspace.js";
 
 export const dynamic = "force-dynamic";
-import { loadPlayers } from "@/lib/data.js";
-import { fmtM, leverage, monthsLeft } from "@/lib/tools.js";
 
-const folders = {
-  priority: { title: "Prioridad alta", description: "Jugadores con palanca", filter: (p) => leverage(p) >= 70 },
-  expiring: { title: "Vencen pronto", description: "Contratos en 12 meses", filter: (p) => monthsLeft(p) <= 12 },
-  followup: { title: "En seguimiento", description: "Contactos activos", filter: () => true },
-  opportunities: { title: "Oportunidades", description: "Negociaciones abiertas", filter: (p) => p.suitors.length >= 2 },
-};
+const systemTitles = { priority: "Prioridad alta", expiring: "Vencen pronto", followup: "En seguimiento", opportunities: "Oportunidades" };
 
-export default async function FolderPage({ params, searchParams }) {
+export default async function FolderPage({ params }) {
   await requireUser();
-  const [{ slug }, query, context, players] = await Promise.all([params, searchParams, getWorkspaceContext(), loadPlayers()]);
+  const [{ slug }, context] = await Promise.all([params, getWorkspaceContext()]);
+  // listFolders solo trae las carpetas a las que el usuario puede entrar: una restringida ajena
+  // llega aquí igual que una que no existe.
   const sharedFolders = context ? await listFolders(context) : [];
   const record = sharedFolders.find((item) => item.$id === slug);
-  const isCustom = !folders[slug];
-  const folder = folders[slug] ?? { title: record?.name || query?.name || "Nueva carpeta", description: record?.description || "Fichero creado por el staff", filter: () => true };
-  const sharedFolder = record || (folders[slug] ? sharedFolders.find((item) => item.$id === slug) : null);
+  const hidden = context ? (await loadAllFolders(context)).some((item) => item.$id === slug) && !record : false;
+  if (hidden || (!record && !systemTitles[slug])) notFound();
+  const title = systemTitles[slug] ?? record.name;
   const children = sharedFolders.filter((item) => item.parentId === slug);
-  const visiblePlayers = players.filter(folder.filter);
+  const current = record ? { $id: record.$id, createdBy: record.createdBy, restricted: Boolean(record.restricted), allowedUserIds: record.allowedUserIds ?? [] } : null;
 
-  return <WorkspaceShell><main className="min-h-screen px-2 py-5">
-    <Link href="/" className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> Resumen</Link>
-    <PageHeader showBack={false} eyebrow="carpeta de trabajo" title={folder.title} description={folder.description} />
-    {sharedFolder && <FolderManager folder={sharedFolder} childrenFolders={children} />}
-    <div className={isCustom ? "max-w-3xl" : "grid gap-6 lg:grid-cols-[1fr_360px]"}>
-      {!isCustom && <section className="space-y-3">
-        <div className="flex items-center justify-between"><h2 className="text-sm font-medium">Jugadores en esta carpeta</h2><Badge variant="secondary">{visiblePlayers.length} jugadores</Badge></div>
-        <div className="grid gap-3 md:grid-cols-2">{visiblePlayers.map((player) => <Link key={player.id} href={`/players/${player.id}`}><Card className="transition hover:-translate-y-0.5 hover:bg-secondary"><CardHeader><CardTitle className="text-base">{player.name}</CardTitle><p className="text-sm text-muted-foreground">{player.pos} · {player.club}</p></CardHeader><CardContent className="flex items-end justify-between"><div><p className="text-xl font-semibold">{fmtM(player.value)}</p><p className="text-xs text-muted-foreground">{monthsLeft(player)} meses de contrato</p></div><Badge variant={leverage(player) >= 70 ? "default" : "secondary"}>Palanca {leverage(player)}</Badge></CardContent></Card></Link>)}</div>
-      </section>}
-      <FolderFiles folderId={slug} />
-    </div>
+  return <WorkspaceShell><main className="flex min-h-[calc(100dvh-5.5rem)] flex-col px-2 md:min-h-[calc(100dvh-2.5rem)]">
+    <Link href="/folders" className="mb-3 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> Carpetas</Link>
+    <FolderDesktop folderId={slug} name={title} canEdit={Boolean(canEdit(context?.member))} canCreateFolders={Boolean(record)} initialFolders={children} current={current} viewer={context ? { userId: context.member.userId, role: context.member.role } : null} />
   </main></WorkspaceShell>;
 }

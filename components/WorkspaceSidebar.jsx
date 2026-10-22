@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Folder, GitCompare, LayoutDashboard, Menu, Newspaper, Plus, Search, ShieldCheck, Users, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Folder, FolderTree, GitCompare, LayoutDashboard, Menu, Newspaper, Search, ShieldCheck, Users, X } from "lucide-react";
+import ClubPicker from "./ClubPicker.jsx";
 import ThemeToggle from "./ThemeToggle.jsx";
 import WorkspaceMembersPanel from "./WorkspaceMembersPanel.jsx";
 import { useUiStore } from "@/lib/ui-store.js";
@@ -15,13 +16,12 @@ import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from 
 const navItems = [
   { href: "/coach", label: "Cuerpo técnico", icon: ClipboardList },
   { href: "/players", label: "Jugadores", icon: Users },
+  { href: "/folders", label: "Carpetas", icon: FolderTree },
   { href: "/negotiations", label: "Negociaciones", icon: Folder },
   { href: "/decision-room", label: "Sala de decisión", icon: ShieldCheck },
   { href: "/news", label: "Noticias", icon: Newspaper },
   { href: "/compare", label: "Comparador", icon: GitCompare },
 ];
-const folderColors = { priority: "bg-[#9f2f2d]", expiring: "bg-[#956400]", followup: "bg-[#1f6c9f]" };
-const systemNames = { priority: "Prioridad alta", expiring: "Vencen pronto", followup: "En seguimiento" };
 const itemClass = "group flex h-8 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left text-sm text-muted-foreground transition-[background-color,color] duration-150 hover:bg-secondary hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring";
 const sectionLabelClass = "text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground";
 const JSON_HEADERS = { "content-type": "application/json" };
@@ -51,9 +51,9 @@ function useWrite() {
   return { busy, write };
 }
 
-function NavLink({ href, label, icon: Icon, dot, active, collapsed, onNavigate }) {
+function NavLink({ href, label, icon: Icon, active, collapsed, onNavigate }) {
   return <Link onClick={onNavigate} prefetch scroll={false} href={href} title={collapsed ? label : undefined} aria-current={active ? "page" : undefined} className={`${itemClass} ${active ? "bg-secondary text-foreground" : ""} ${collapsed ? "justify-center px-0" : ""}`}>
-    {Icon ? <Icon aria-hidden="true" className="size-4 shrink-0" /> : <span className={`size-2 shrink-0 rounded-full ${dot}`} />}
+    <Icon aria-hidden="true" className="size-4 shrink-0" />
     {collapsed ? <span className="sr-only">{label}</span> : <span className="min-w-0 flex-1 truncate">{label}</span>}
   </Link>;
 }
@@ -62,19 +62,14 @@ function NavLink({ href, label, icon: Icon, dot, active, collapsed, onNavigate }
 function WorkspaceHeader({ workspace, canManage, collapsed, mobile }) {
   const toggleSidebar = useUiStore((state) => state.toggleSidebar);
   const { busy, write } = useWrite();
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState("");
+  const [picking, setPicking] = useState(false);
 
-  function startEditing() {
-    setDraft(workspace.name);
-    setEditing(true);
-  }
-
-  async function rename(event) {
-    event.preventDefault();
-    const name = draft.trim();
-    if (!name) return;
-    if (await write("/api/workspace", { method: "PATCH", headers: JSON_HEADERS, body: JSON.stringify({ name }) })) setEditing(false);
+  // El club elegido (o un nombre propio) pasa a ser el nombre del workspace.
+  async function rename(name, { club }) {
+    // Un club de la lista también guarda su escudo como icono; un nombre propio solo renombra.
+    const saved = await write(club ? "/api/workspace/club" : "/api/workspace", { method: club ? "POST" : "PATCH", headers: JSON_HEADERS, body: JSON.stringify({ name }) });
+    if (saved) setPicking(false);
+    return saved;
   }
 
   async function uploadIcon(event) {
@@ -95,9 +90,8 @@ function WorkspaceHeader({ workspace, canManage, collapsed, mobile }) {
       {canManage
         ? <label className={`${iconClass} cursor-pointer`} title="Cambiar icono del workspace"><input type="file" accept="image/*" onChange={uploadIcon} disabled={busy} className="sr-only" aria-label="Cambiar icono del workspace" />{iconContent}</label>
         : <div className={iconClass}>{iconContent}</div>}
-      {!collapsed && (editing
-        ? <form onSubmit={rename} className="min-w-0 flex-1"><input value={draft} onChange={(event) => setDraft(event.target.value)} autoFocus onBlur={() => setEditing(false)} className="w-full max-w-32 rounded-md border bg-background px-2 py-1 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Nombre del workspace" /></form>
-        : <button type="button" disabled={!canManage} onClick={startEditing} className="group flex min-w-0 max-w-full flex-1 items-center gap-1 rounded-md text-left focus-visible:ring-2 focus-visible:ring-ring"><span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{workspace.name}</span><span className="block text-[10px] text-muted-foreground">Workspace</span></span>{canManage && <ChevronDown aria-hidden="true" className="size-3 shrink-0 text-muted-foreground transition-transform group-hover:rotate-180" />}</button>)}
+      {!collapsed && <button type="button" disabled={!canManage} onClick={() => setPicking(true)} aria-haspopup="dialog" className="group flex min-w-0 max-w-full flex-1 items-center gap-1 rounded-md text-left focus-visible:ring-2 focus-visible:ring-ring"><span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{workspace.name}</span><span className="block text-[10px] text-muted-foreground">Workspace</span></span>{canManage && <ChevronDown aria-hidden="true" className="size-3 shrink-0 text-muted-foreground transition-transform group-hover:rotate-180" />}</button>}
+      {canManage && <ClubPicker open={picking} onOpenChange={setPicking} current={workspace.name} busy={busy} onSelect={rename} />}
     </div>
     <div className={`flex shrink-0 items-center gap-1 ${collapsed ? "flex-col" : ""}`}>
       {!mobile && <ThemeToggle compact />}
@@ -114,33 +108,9 @@ function SearchBox({ search, onSearch, collapsed }) {
   return <Button variant="outline" size={collapsed ? "icon" : "sm"} onClick={() => setOpen(true)} className={collapsed ? "size-8" : "w-full justify-start"} aria-label="Buscar"><Search data-icon="inline-start" />{!collapsed && <>Buscar<span className="ml-auto text-[10px] text-muted-foreground">⌘ K</span></>}</Button>;
 }
 
-// Carpetas de sistema + las creadas por el staff. Crear carpeta requiere rol editor+.
-function FolderSection({ folders, search, canEdit, collapsed, isActive, onNavigate }) {
-  const { busy, write } = useWrite();
-  const [adding, setAdding] = useState(false);
-  const [draft, setDraft] = useState("");
-  const custom = folders.filter((folder) => !folder.parentId && folder.kind !== "system" && matches(folder.name, search));
-
-  async function addFolder(event) {
-    event.preventDefault();
-    const name = draft.trim();
-    if (!name) return;
-    if (await write("/api/workspace/folders", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ name }) })) { setDraft(""); setAdding(false); }
-  }
-
-  return <section className={`w-full border-t pt-3 ${collapsed ? "flex flex-col items-center" : ""}`} aria-labelledby="folders-label">
-    {!collapsed && <div className="mb-1 flex items-center justify-between px-2"><p id="folders-label" className={sectionLabelClass}>Carpetas</p>{canEdit && <button type="button" onClick={() => setAdding((value) => !value)} className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground" aria-label={adding ? "Cancelar nueva carpeta" : "Añadir carpeta"}>{adding ? <X aria-hidden="true" className="size-3" /> : <Plus aria-hidden="true" className="size-3" />}</button>}</div>}
-    {adding && !collapsed && <form onSubmit={addFolder} className="mb-2 flex gap-1 px-2"><input value={draft} onChange={(event) => setDraft(event.target.value)} autoFocus placeholder="Nombre…" aria-label="Nombre de carpeta" className="min-w-0 flex-1 rounded-md border bg-background px-2 py-1.5 text-xs outline-none" /><button type="submit" disabled={busy} className="grid size-7 place-items-center rounded-md bg-primary text-primary-foreground disabled:opacity-60" aria-label="Guardar carpeta"><Plus aria-hidden="true" className="size-3" /></button></form>}
-    <div className="flex w-full flex-col gap-1">
-      {["priority", "expiring", "followup"].map((id) => <NavLink key={id} href={`/folders/${id}`} label={folders.find((item) => item.id === id)?.name || systemNames[id]} dot={folderColors[id]} active={isActive(`/folders/${id}`)} collapsed={collapsed} onNavigate={onNavigate} />)}
-      {custom.map((folder) => <NavLink key={folder.id} href={`/folders/${folder.id}`} label={folder.name} dot="bg-primary" active={isActive(`/folders/${folder.id}`)} collapsed={collapsed} onNavigate={onNavigate} />)}
-    </div>
-  </section>;
-}
-
 // Contenido de la navegación. Se renderiza en dos sitios: la barra fija de escritorio y el
 // drawer móvil (`mobile`), donde nunca está plegada y cierra el drawer al navegar (`onNavigate`).
-function SidebarPanel({ mobile = false, onNavigate, workspace, folders, canManage, canEdit }) {
+function SidebarPanel({ mobile = false, onNavigate, workspace, canManage }) {
   const pathname = usePathname();
   const collapsed = useUiStore((state) => state.sidebarCollapsed) && !mobile;
   const [search, setSearch] = useState("");
@@ -159,7 +129,6 @@ function SidebarPanel({ mobile = false, onNavigate, workspace, folders, canManag
           {groupLabel("Workspace", "mt-2")}
           {navItems.filter((item) => matches(item.label, search)).map(link)}
         </nav>
-        <FolderSection folders={folders} search={search} canEdit={canEdit} collapsed={collapsed} isActive={isActive} onNavigate={onNavigate} />
       </div>
       <div className="mt-4 min-w-0 border-t pt-3"><WorkspaceMembersPanel collapsed={collapsed} /></div>
     </div>

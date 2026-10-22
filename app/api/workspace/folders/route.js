@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { ID, Query } from "node-appwrite";
 import { DB } from "@/lib/appwrite.js";
 import { revalidateFoldersCache } from "@/lib/cache-tags.js";
-import { canEdit, getWorkspaceContext, listFolders } from "@/lib/workspace.js";
+import { canEdit, findFolder, getWorkspaceContext, listFolders } from "@/lib/workspace.js";
 
 export async function GET() {
   const context = await getWorkspaceContext();
@@ -21,8 +21,8 @@ export async function POST(request) {
   const parentId = body.parentId ? String(body.parentId) : null;
   if (!name || name.length > 160) return NextResponse.json({ error: "El nombre no es válido" }, { status: 400 });
   if (parentId) {
-    const parent = await context.db.getRow(DB, "folders", parentId);
-    if (parent.workspaceId !== context.workspace.$id) return NextResponse.json({ error: "Carpeta padre no válida" }, { status: 400 });
+    // findFolder ya descarta carpetas de otro workspace y las restringidas a las que no se puede entrar.
+    if (!(await findFolder(context, parentId))) return NextResponse.json({ error: "Carpeta padre no válida" }, { status: 400 });
   }
   const folder = await context.db.createRow(DB, "folders", ID.unique(), { workspaceId: context.workspace.$id, parentId, name, description: String(body.description ?? "").trim() || null, kind: "custom", createdBy: context.user.$id });
   revalidateFoldersCache();

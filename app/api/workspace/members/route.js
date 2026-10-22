@@ -20,6 +20,7 @@ export async function POST(request) {
   const body = await request.json();
   const email = String(body.email ?? "").trim().toLowerCase();
   if (!/^\S+@\S+\.\S+$/.test(email)) return NextResponse.json({ error: "Introduce un email válido" }, { status: 400 });
+  if (body.role === "owner") return NextResponse.json({ error: "El rol de propietario no se puede asignar" }, { status: 400 });
   const users = await context.db.listRows(DB, "workspace_members", [Query.equal("workspaceId", context.workspace.$id), Query.equal("email", email), Query.limit(1)]);
   if (users.total) return NextResponse.json({ error: "Ese usuario ya está en el workspace" }, { status: 409 });
   let userId = `invite_${ID.unique()}`;

@@ -22,6 +22,10 @@ Los datos pertenecen a un **workspace**. Appwrite se usa con la API key de admin
 
 Una consulta sin filtro de workspace es una fuga de datos entre clientes.
 
+### Acceso por carpeta
+
+Dentro de un workspace, una carpeta puede ser `restricted` con una lista `allowedUserIds` (migración `014_folder_access`). Entran owner/admin, quien la creó y los usuarios listados; la restricción se hereda por las subcarpetas. La regla pura está en `lib/folder-access.js` y se aplica en `lib/workspace.js` (`listFolders`, `getFolder`, `findFolder`): **no leas carpetas ni documentos por id sin pasar por ellos**, y para saber si una carpeta existe aunque no se pueda ver usa `loadAllFolders`. Una carpeta sin acceso responde 404, igual que una inexistente. Las filas anteriores a la migración no tienen los campos y cuentan como abiertas. Tests en `tests/folder-access.test.js` y `tests/workspace-isolation.test.js`.
+
 ## Flujo de una petición
 
 - **Página privada**: `requireUser()` redirige a `/login` si no hay sesión → `loadPlayers()` / helpers de `lib/` → render dentro de `WorkspaceShell`.
@@ -66,6 +70,10 @@ Los IDs de fila suelen ser **deterministas** (hash de las claves) para que crear
 ## Caché
 
 `unstable_cache` solo en noticias (5 min), con etiquetas `news` y `news:<playerId>`. Cualquier escritura que cambie lo cacheado debe llamar a las funciones de `lib/cache-tags.js`.
+
+### Actualización de noticias
+
+Nada se actualiza solo: hay que ejecutar la sincronización. En producción lo hace **Vercel Cron** cada hora (`vercel.json` → `GET /api/news/sync`, autenticado con `CRON_SECRET` o `NEWS_SYNC_SECRET`; define uno de los dos en Vercel). Ojo: el plan Hobby solo permite crons diarios. Como respaldo, al abrir la bandeja de noticias con datos de más de 1 h se refresca el workspace tras responder (`refreshNewsIfStale`, máximo un intento cada 15 min). A mano: botón/POST `/api/news/sync` con sesión, o `bun run news:sync`.
 
 ## Cálculo de negocio
 

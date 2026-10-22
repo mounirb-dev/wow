@@ -1,7 +1,9 @@
-// POST /api/news/sync — refresca las noticias.
-//  - Con `Authorization: Bearer $NEWS_SYNC_SECRET` (cron): todos los workspaces.
-//  - Con sesión de usuario: solo los jugadores de su workspace.
-// Cualquier otra llamada recibe 401.
+// Refresca las noticias.
+//  - Cron (GET en Vercel Cron, o POST): `Authorization: Bearer <NEWS_SYNC_SECRET o CRON_SECRET>`
+//    sincroniza TODOS los workspaces. vercel.json lo programa cada hora.
+//  - POST con sesión de usuario: solo los jugadores de su workspace.
+// Cualquier otra llamada recibe 401 (un GET sin el secreto del cron nunca sincroniza).
+import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { TablesDB } from "node-appwrite";
 import { adminClient, listAll } from "@/lib/appwrite.js";
@@ -13,14 +15,21 @@ import { getUser } from "@/lib/session.js";
 
 export const maxDuration = 60;
 
-export async function POST(request) {
-  const expected = process.env.NEWS_SYNC_SECRET;
-  const provided = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-  const isCron = Boolean(expected) && provided === expected;
-  if (!isCron && !(await getUser())) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+const digest = (value) => createHash("sha256").update(value).digest();
 
-  // A scheduled call has no user session, so it refreshes every workspace; a signed-in call only its own.
-  const players = isCron
+// Comparación en tiempo constante contra los secretos configurados (Vercel Cron envía CRON_SECRET).
+function isCron(request) {
+  const provided = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  if (!provided) return false;
+  return [process.env.NEWS_SYNC_SECRET, process.env.CRON_SECRET].filter(Boolean).some((secret) => timingSafeEqual(digest(provided), digest(secret)));
+}
+
+async function sync(request, { cronOnly }) {
+  const cron = isCron(request);
+  if (!cron && (cronOnly || !(await getUser()))) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
+  // Una llamada programada no tiene sesión de usuario: refresca todos los workspaces; con sesión, solo el propio.
+  const players = cron
     ? (await listAll(new TablesDB(adminClient()), "players")).map((row) => ({ id: row.$id, name: row.name, club: row.club }))
     : await loadPlayers();
   const results = await mapLimit(players, 4, async (player) => {
@@ -30,3 +39,6 @@ export async function POST(request) {
   revalidateNewsCache(results.map((result) => result.playerId));
   return NextResponse.json({ updatedAt: new Date().toISOString(), results });
 }
+
+export const POST = (request) => sync(request, { cronOnly: false });
+export const GET = (request) => sync(request, { cronOnly: true });
