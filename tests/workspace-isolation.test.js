@@ -83,7 +83,8 @@ mock.module("next/cache", () => ({ unstable_cache: (fn) => fn, revalidateTag: ()
 mock.module("../lib/session.js", () => ({ COOKIE: "as_session", cookieOptions: {}, getUser: async () => currentUser, requireUser: async () => currentUser }));
 
 const { loadPlayer, loadPlayers, loadPlayersFor } = await import("../lib/data.js");
-const { loadStaffDataByPlayer } = await import("../lib/staff-data.js");
+const { loadPlayerStaffData, loadStaffDataByPlayer } = await import("../lib/staff-data.js");
+const { ownSignal, staffComments } = await import("../lib/staff-notes.js");
 const { loadAllNews, loadPlayerNews, refreshNewsIfStale } = await import("../lib/news-sync.js");
 const { listFolders, resolveWorkspaceContext } = await import("../lib/workspace.js");
 const players = await import("../app/api/players/[id]/route.js");
@@ -723,5 +724,57 @@ describe("cuenta nueva", () => {
     expect(await listFolders(context)).toEqual([]);
     expect(await loadPlayersFor(context)).toEqual([]);
     expect(Object.values(store.folders).filter((row) => row.workspaceId === context.workspace.$id)).toEqual([]);
+  });
+});
+
+describe("comentarios del staff en la ficha", () => {
+  beforeEach(seed);
+  const save = (body) => staff.PATCH(json("PATCH", body), params({ id: "pA" }));
+
+  test("cada miembro conserva SU valoración y la ficha muestra la de todos con autor", async () => {
+    as(users.editorA);
+    expect((await save({ interest: "interested", notes: "Me encaja por la banda" })).status).toBe(200);
+    as(users.adminA);
+    expect((await save({ interest: "not-interested", notes: "Demasiado caro" })).status).toBe(200);
+
+    const data = await loadPlayerStaffData("pA");
+    as(users.editorA);
+    expect(ownSignal(data.signals, users.editorA.$id)).toMatchObject({ interest: "interested", notes: "Me encaja por la banda" });
+    expect(ownSignal(data.signals, users.adminA.$id)).toMatchObject({ interest: "not-interested", notes: "Demasiado caro" });
+
+    const { opinions } = staffComments(data);
+    expect(opinions.map((item) => [item.author, item.notes]).sort()).toEqual([["Admin A", "Demasiado caro"], ["Editor A", "Me encaja por la banda"]]);
+  });
+
+  test("guardar de nuevo actualiza la propia nota, no crea otra fila", async () => {
+    as(users.editorA);
+    await save({ interest: "interested", notes: "primera" });
+    await save({ interest: "interested", notes: "segunda" });
+    const mine = Object.values(store.player_staff_signals).filter((row) => row.playerId === "pA" && row.userId === users.editorA.$id);
+    expect(mine).toHaveLength(1);
+    expect(mine[0].notes).toBe("segunda");
+  });
+
+  test("los movimientos propuestos aparecen con su nota, y nada de otro workspace", async () => {
+    as(users.editorA);
+    await targets.POST(json("POST", { playerId: "pA", club: "Milan", fee: 5, notes: "oferta verbal" }));
+    const { moves } = staffComments(await loadPlayerStaffData("pA"));
+    expect(moves.map((move) => move.club)).toEqual(expect.arrayContaining(["Milan", "Visible A"]));
+    expect(moves.find((move) => move.club === "Milan").notes).toBe("oferta verbal");
+
+    // Lo de A no se ve desde B, ni lo de B desde A.
+    expect(JSON.stringify(staffComments(await loadPlayerStaffData("pB")))).not.toContain("Milan");
+    as(users.ownerB);
+    const fromB = await loadPlayerStaffData("pA");
+    expect(fromB).toEqual({ signals: [], targets: [] });
+    expect(JSON.stringify(staffComments(await loadPlayerStaffData("pB")))).not.toContain("Visible A");
+  });
+
+  test("un viewer puede leer los comentarios de la ficha pero no escribir", async () => {
+    as(users.editorA);
+    await save({ interest: "interested", notes: "visible para todos" });
+    as(users.viewerA);
+    expect((await save({ interest: "interested", notes: "no" })).status).toBe(403);
+    expect(staffComments(await loadPlayerStaffData("pA")).opinions.map((item) => item.notes)).toContain("visible para todos");
   });
 });

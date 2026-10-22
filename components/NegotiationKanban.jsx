@@ -6,6 +6,7 @@ import { arrayMove } from "@dnd-kit/sortable";
 import { Circle, CircleCheck, CircleDot } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import KanbanColumn from "@/components/shadcn-space/blocks/kanban-application-01/kanban-column";
+import { ownSignal } from "@/lib/staff-notes.js";
 import StaffInterestEditor from "./StaffInterestEditor.jsx";
 
 // Tablero de interés del staff: tres columnas (por revisar / me interesa / no interesa).
@@ -18,10 +19,10 @@ const columnConfig = [
 
 const toTask = (player) => ({ id: player.id, content: player.name, meta: `${player.club} · ${player.pos} · ${player.age} años`, player });
 
-// `staffData` = { [playerId]: { signals, targets } } (ver lib/staff-data.js). La columna inicial
-// de cada jugador sale de la valoración más reciente; sin valoración, "pending".
-export default function NegotiationKanban({ players, staffData, initialPlayerId = null }) {
-  const initialSignals = useMemo(() => Object.fromEntries(players.map((player) => [player.id, staffData[player.id]?.signals?.[0] || { interest: "pending", notes: "" }])), [players, staffData]);
+// `staffData` = { [playerId]: { signals, targets } } (ver lib/staff-data.js). Cada usuario ve SU
+// tablero: la columna inicial de cada jugador sale de su propia valoración (`userId`); sin ella, "pending".
+export default function NegotiationKanban({ players, staffData, userId, initialPlayerId = null }) {
+  const initialSignals = useMemo(() => Object.fromEntries(players.map((player) => [player.id, ownSignal(staffData[player.id]?.signals, userId) || { interest: "pending", notes: "" }])), [players, staffData, userId]);
   const [signals, setSignals] = useState(initialSignals);
   const [columns, setColumns] = useState(() => columnConfig.map((column) => ({ ...column, tasks: players.filter((player) => (initialSignals[player.id]?.interest || "pending") === column.id).map(toTask) })));
   const [activeTask, setActiveTask] = useState(null);
