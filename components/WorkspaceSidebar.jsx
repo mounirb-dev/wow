@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Folder, FolderTree, GitCompare, LayoutDashboard, Menu, Newspaper, Search, ShieldCheck, Users, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Folder, FolderTree, GitCompare, LayoutDashboard, Menu, Newspaper, Search, ShieldCheck, Users, X } from "lucide-react";
 import ClubPicker from "./ClubPicker.jsx";
 import ThemeToggle from "./ThemeToggle.jsx";
 import WorkspaceMembersPanel from "./WorkspaceMembersPanel.jsx";
@@ -14,7 +14,6 @@ import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from 
 // Navegación principal. Las carpetas de sistema (priority/expiring/followup) están fijas abajo;
 // el resto de carpetas vienen del servidor (WorkspaceShell) como prop.
 const navItems = [
-  { href: "/coach", label: "Cuerpo técnico", icon: ClipboardList },
   { href: "/players", label: "Jugadores", icon: Users },
   { href: "/folders", label: "Carpetas", icon: FolderTree },
   { href: "/negotiations", label: "Negociaciones", icon: Folder },

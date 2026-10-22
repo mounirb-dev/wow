@@ -4,7 +4,6 @@ Workspace para gestionar una cartera de fútbol, negociaciones, documentos y cri
 
 - **Cartera:** cada jugador con valor, evolución, vencimiento de contrato y *palanca* (0-100: cuánta fuerza tienes para negociar ahora).
 - **Simulador de negociación:** eliges club y salario; ves probabilidad de cierre y comisión esperada, y calculas la petición óptima.
-- **Cuerpo técnico (`/coach`):** alertas priorizadas, equilibrio de plantilla por líneas, constructor de alineación y matriz de decisión con pesos propios. Nunca inventa datos: lo que falta se marca y baja la cobertura.
 - **MCP:** las mismas herramientas disponibles para Claude Desktop u otros clientes MCP.
 - **Backend:** Appwrite sobre **PostgreSQL**, con migraciones versionadas, Appwrite Storage y login con Google/Apple.
 

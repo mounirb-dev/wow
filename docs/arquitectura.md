@@ -49,7 +49,7 @@ Dentro de un workspace, una carpeta puede ser `restricted` con una lista `allowe
 | `db/migrations/` | Esquema de Appwrite, versionado y numerado. |
 | `scripts/` | Utilidades de entorno (`migrate`, `bootstrap`, `sync-news`…). |
 | `app/mcp`, `app/api/mcp/oauth`, `app/.well-known` | Endpoint MCP remoto y su servidor OAuth (ver "MCP"). |
-| `lib/coach.js`, `components/coach` | Herramientas del cuerpo técnico: alertas, equilibrio, alineación, matriz de decisión e informe de jugador (ver "Cuerpo técnico"). |
+| `lib/coach.js`, `components/coach` | Lógica de decisión técnica (alertas, equilibrio, alineación, matriz e informe de jugador) y el informe de la ficha. La página `/coach` se eliminó; la lógica sigue sirviendo al MCP y a la ficha (ver "Cuerpo técnico"). |
 | `lib/mcp-*.js` | Núcleo OAuth (tokens firmados, PKCE), herramientas MCP y manejador HTTP. |
 | `tests/` | `bun test`: fórmulas, utilidades, OAuth, endpoint MCP y puerta de calidad. |
 | `scripts/verify.mjs` | Puerta de calidad previa al push (ver "Calidad"). |
@@ -89,7 +89,7 @@ Ver `docs/production-appwrite.md`. Las migraciones no se ejecutan en el build de
 
 ## Cuerpo técnico
 
-`lib/coach.js` es lógica pura (testeada en `tests/coach.test.js`) que usan la página `/coach`, el informe de la ficha de jugador y las herramientas MCP. Regla de oro: **no se inventa ningún dato**. Si falta un dato (valoración del staff, minutos…) ese criterio se excluye, el resto se re-normaliza y se informa de la `coverage`. Los por-90 solo se calculan con 450 minutos o más. La recomendación de renovar/no renovar sale de reglas visibles (`DECISION_RULES`), pensadas para priorizar el trabajo del staff y no como decisión automática. La alineación y la matriz se calculan en el cliente y no se guardan.
+`lib/coach.js` es lógica pura (testeada en `tests/coach.test.js`) que usan el informe de la ficha de jugador y las herramientas MCP (la página `/coach` se eliminó). Regla de oro: **no se inventa ningún dato**. Si falta un dato (valoración del staff, minutos…) ese criterio se excluye, el resto se re-normaliza y se informa de la `coverage`. Los por-90 solo se calculan con 450 minutos o más. La recomendación de renovar/no renovar sale de reglas visibles (`DECISION_RULES`), pensadas para priorizar el trabajo del staff y no como decisión automática.
 
 ## Calidad
 
