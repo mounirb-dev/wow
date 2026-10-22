@@ -233,9 +233,28 @@ describe("aislamiento: lecturas", () => {
     expect(foldersList.folders.map((f) => f.$id).sort()).toEqual(["fA", "fOpen"]);
   });
 
-  test("el icono servido es el del propio workspace", async () => {
-    expect((await icon.GET()).status).toBe(200);
-    expect(storageCalls.previewed).toEqual(["iconA"]);
+  test("el icono servido es el del propio workspace, tal cual (sin miniaturas de Appwrite)", async () => {
+    storedFiles.iconA = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.from("resto")]);
+    const res = await icon.GET();
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("image/png");
+    expect(res.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(Buffer.from(await res.arrayBuffer())).toEqual(storedFiles.iconA);
+    expect(storageCalls.downloaded).toEqual(["iconA"]);
+    // Las transformaciones están bloqueadas en el plan gratuito de Appwrite Cloud: no se puede pedir una miniatura.
+    expect(storageCalls.previewed).toEqual([]);
+  });
+
+  test("el icono con otro formato (o corrupto) responde 404 en vez de servirse como imagen", async () => {
+    storedFiles.iconA = Buffer.from("<svg onload=alert(1)>");
+    expect((await icon.GET()).status).toBe(404);
+  });
+
+  test("el icono reconoce JPEG y WebP", async () => {
+    storedFiles.iconA = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
+    expect((await icon.GET()).headers.get("content-type")).toBe("image/jpeg");
+    storedFiles.iconA = Buffer.concat([Buffer.from("RIFF"), Buffer.from([1, 2, 3, 4]), Buffer.from("WEBPVP8 ")]);
+    expect((await icon.GET()).headers.get("content-type")).toBe("image/webp");
   });
 });
 
