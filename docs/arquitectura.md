@@ -73,7 +73,7 @@ Los IDs de fila suelen ser **deterministas** (hash de las claves) para que crear
 
 ### Actualización de noticias
 
-Nada se actualiza solo: hay que ejecutar la sincronización. En producción lo hace **Vercel Cron** cada hora (`vercel.json` → `GET /api/news/sync`, autenticado con `CRON_SECRET` o `NEWS_SYNC_SECRET`; define uno de los dos en Vercel). Ojo: el plan Hobby solo permite crons diarios. Como respaldo, al abrir la bandeja de noticias con datos de más de 1 h se refresca el workspace tras responder (`refreshNewsIfStale`, máximo un intento cada 15 min). A mano: botón/POST `/api/news/sync` con sesión, o `bun run news:sync`.
+Las noticias se actualizan al abrir la bandeja: si lo guardado tiene más de 1 h, se refresca el workspace tras responder (`refreshNewsIfStale`, máximo un intento cada 15 min). No hay cron programado (se quitó `vercel.json`). `POST /api/news/sync` con sesión sincroniza el propio workspace; con `CRON_SECRET` o `NEWS_SYNC_SECRET` en `Authorization: Bearer` sincroniza todos (para un planificador externo). A mano: `bun run news:sync`.
 
 ## Cálculo de negocio
 

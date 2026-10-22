@@ -1,6 +1,6 @@
 // Refresca las noticias.
 //  - Cron (GET en Vercel Cron, o POST): `Authorization: Bearer <NEWS_SYNC_SECRET o CRON_SECRET>`
-//    sincroniza TODOS los workspaces. vercel.json lo programa cada hora.
+//    sincroniza TODOS los workspaces. No hay cron programado: lo llama un planificador externo si se quiere.
 //  - POST con sesión de usuario: solo los jugadores de su workspace.
 // Cualquier otra llamada recibe 401 (un GET sin el secreto del cron nunca sincroniza).
 import { createHash, timingSafeEqual } from "node:crypto";
