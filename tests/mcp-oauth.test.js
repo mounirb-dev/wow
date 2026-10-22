@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { ACCESS_TTL, authorizationServerMetadata, exchange, isAllowedRedirect, issueCode, protectedResourceMetadata, registerClient, signToken, userFromAuthorization, validateAuthorizeRequest, verifyPkce, verifyToken } from "../lib/mcp-oauth.js";
+import { ACCESS_TTL, authorizationServerMetadata, canWrite, exchange, normalizeScope, isAllowedRedirect, issueCode, protectedResourceMetadata, registerClient, signToken, userFromAuthorization, validateAuthorizeRequest, verifyPkce, verifyToken } from "../lib/mcp-oauth.js";
 
 beforeAll(() => { process.env.MCP_OAUTH_SECRET = "test-secret-no-usar-en-produccion"; });
 
@@ -70,7 +70,9 @@ describe("canje de tokens", () => {
     const { tokens } = exchange(form());
     expect(tokens.token_type).toBe("Bearer");
     expect(tokens.expires_in).toBe(ACCESS_TTL);
-    expect(userFromAuthorization(`Bearer ${tokens.access_token}`)).toEqual(user);
+    // Sin permiso en el código (clientes anteriores): vale como edición, para no romper conexiones ya hechas.
+    expect(userFromAuthorization(`Bearer ${tokens.access_token}`)).toEqual({ ...user, scope: "write" });
+    expect(tokens.scope).toBe("mcp");
   });
   test("falla con verifier incorrecto, redirect distinta, client distinto o código basura", () => {
     expect(exchange(form({ code_verifier: "b".repeat(64) })).error).toBe("invalid_grant");
@@ -82,7 +84,7 @@ describe("canje de tokens", () => {
     const { tokens } = exchange(form());
     expect(userFromAuthorization(`Bearer ${tokens.refresh_token}`)).toBeNull();
     const renewed = exchange({ grant_type: "refresh_token", refresh_token: tokens.refresh_token });
-    expect(userFromAuthorization(`Bearer ${renewed.tokens.access_token}`)).toEqual(user);
+    expect(userFromAuthorization(`Bearer ${renewed.tokens.access_token}`)).toEqual({ ...user, scope: "write" });
   });
   test("grant desconocido o refresh falso", () => {
     expect(exchange({ grant_type: "password" }).error).toBe("unsupported_grant_type");
@@ -91,6 +93,42 @@ describe("canje de tokens", () => {
   test("userFromAuthorization sin cabecera o con esquema distinto", () => {
     expect(userFromAuthorization(undefined)).toBeNull();
     expect(userFromAuthorization("Basic abc")).toBeNull();
+  });
+});
+
+describe("permiso elegido al autorizar (solo lectura / lectura y edición)", () => {
+  const withScope = (scope) => {
+    const { client_id } = newClient();
+    const code = issueCode({ user, clientId: client_id, redirectUri: redirect, codeChallenge: challenge, scope });
+    return exchange({ grant_type: "authorization_code", code, client_id, redirect_uri: redirect, code_verifier: verifier }).tokens;
+  };
+  test("lo que se elige llega al token, al refresh y a la respuesta", () => {
+    const read = withScope("read");
+    expect(read.scope).toBe("mcp:read");
+    expect(userFromAuthorization(`Bearer ${read.access_token}`)).toMatchObject({ scope: "read" });
+    const renewed = exchange({ grant_type: "refresh_token", refresh_token: read.refresh_token }).tokens;
+    expect(renewed.scope).toBe("mcp:read");
+    expect(userFromAuthorization(`Bearer ${renewed.access_token}`).scope).toBe("read");
+    const write = withScope("write");
+    expect(write.scope).toBe("mcp:write");
+    expect(userFromAuthorization(`Bearer ${write.access_token}`).scope).toBe("write");
+  });
+  test("cualquier valor raro se queda en solo lectura (nunca se sube a edición por accidente)", () => {
+    for (const value of [undefined, null, "", "admin", "WRITE", 1, {}]) expect(normalizeScope(value)).toBe("read");
+    expect(normalizeScope("write")).toBe("write");
+    expect(withScope("admin").scope).toBe("mcp:read");
+  });
+  test("canWrite: solo lectura no escribe; sin permiso (token antiguo) sí", () => {
+    expect(canWrite({ scope: "read" })).toBe(false);
+    expect(canWrite({ scope: "write" })).toBe(true);
+    expect(canWrite({})).toBe(true);
+    expect(canWrite(null)).toBe(false);
+  });
+  test("el permiso no se puede cambiar editando el token (va firmado)", () => {
+    const [body, sig] = withScope("read").access_token.split(".");
+    const payload = JSON.parse(Buffer.from(body, "base64url").toString());
+    const forged = Buffer.from(JSON.stringify({ ...payload, s: "write" })).toString("base64url");
+    expect(userFromAuthorization(`Bearer ${forged}.${sig}`)).toBeNull();
   });
 });
 

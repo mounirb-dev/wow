@@ -2,7 +2,7 @@
 // Requiere la sesión de la web; tras re-validar cliente y redirección emite el código y vuelve
 // al cliente con 303. Las peticiones inválidas nunca redirigen (evita open-redirects).
 import { NextResponse } from "next/server";
-import { issueCode, validateAuthorizeRequest } from "@/lib/mcp-oauth.js";
+import { issueCode, normalizeScope, validateAuthorizeRequest } from "@/lib/mcp-oauth.js";
 import { getUser } from "@/lib/session.js";
 
 export async function POST(request) {
@@ -17,6 +17,6 @@ export async function POST(request) {
   if (form.state) target.searchParams.set("state", String(form.state));
   if (checked.error) target.searchParams.set("error", checked.error);
   else if (form.decision !== "allow") target.searchParams.set("error", "access_denied");
-  else target.searchParams.set("code", issueCode({ user, clientId: form.client_id, redirectUri: form.redirect_uri, codeChallenge: form.code_challenge }));
+  else target.searchParams.set("code", issueCode({ user, clientId: form.client_id, redirectUri: form.redirect_uri, codeChallenge: form.code_challenge, scope: normalizeScope(form.scope) }));
   return NextResponse.redirect(target, 303);
 }

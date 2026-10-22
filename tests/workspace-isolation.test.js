@@ -131,6 +131,8 @@ mock.module("../lib/session.js", () => ({ COOKIE: "as_session", cookieOptions: {
 
 const { loadPlayer, loadPlayers, loadPlayersFor } = await import("../lib/data.js");
 const { inviteClub } = await import("../lib/club-invite.js");
+const { addSuitor, removeSuitor, saveStaffSignal, updatePlayer } = await import("../lib/player-store.js");
+const { decisionMatrix } = await import("../lib/coach.js");
 const { loadPlayerStaffData, loadStaffDataByPlayer } = await import("../lib/staff-data.js");
 const { ownSignal, staffComments } = await import("../lib/staff-notes.js");
 const { loadAllNews, loadPlayerNews, refreshNewsIfStale } = await import("../lib/news-sync.js");
@@ -1051,6 +1053,90 @@ describe("editar datos de un jugador", () => {
   test("no se pueden cambiar campos internos desde el cuerpo", async () => {
     expect((await patch({ workspaceId: "wsB", seed: 99, momentum: 1 })).status).toBe(400);
     expect(store.players.pA.workspaceId).toBe("wsA");
+  });
+});
+
+describe("escritura de datos para analíticas (lib/player-store.js, la usa también el MCP)", () => {
+  beforeEach(seed);
+  const as_ = async (user) => resolveWorkspaceContext(user);
+  const fail = async (promise, status, text) => {
+    const error = await promise.then(() => null, (e) => e);
+    expect(error?.name).toBe("PlayerError");
+    expect(error.status).toBe(status);
+    if (text) expect(error.message).toContain(text);
+  };
+
+  test("updatePlayer guarda rendimiento y valoración técnica, y las analíticas los usan", async () => {
+    const context = await as_(users.editorA);
+    await updatePlayer(context, "pA", { minutes: 2700, goals: 12, assists: 5, progressiveActions: 90, tacticalFit: 88, availability: 95, adaptationRisk: 10, role: "Titular", staffNotes: " Muy bien ", value: 120.5 });
+    expect(store.players.pA).toMatchObject({ minutes: 2700, goals: 12, assists: 5, progressiveActions: 90, tacticalFit: 88, availability: 95, adaptationRisk: 10, role: "Titular", staffNotes: "Muy bien", value: 120.5 });
+    const [player] = await loadPlayersFor(context);
+    expect(decisionMatrix([player])[0]).toMatchObject({ reliable: true, score: expect.any(Number) });
+  });
+
+  test("updatePlayer: null o vacío borra el dato; un valor inválido es un error y NO guarda nada", async () => {
+    const context = await as_(users.editorA);
+    await updatePlayer(context, "pA", { goals: 7, staffNotes: "x" });
+    await updatePlayer(context, "pA", { goals: null, staffNotes: "" });
+    expect(store.players.pA.goals).toBeNull();
+    expect(store.players.pA.staffNotes).toBeNull();
+    for (const body of [{ tacticalFit: 101 }, { availability: -1 }, { goals: 1.5 }, { minutes: "muchos" }, { minutes: 100001 }]) {
+      await fail(updatePlayer(context, "pA", { phone: "+34 600 111 222", ...body }), 400, "entero");
+    }
+    expect(store.players.pA.phone).toBeUndefined();
+    await fail(updatePlayer(context, "pA", {}), 400, "Sin cambios");
+    await fail(updatePlayer(context, "pA", { seed: 9, workspaceId: "wsB" }), 400, "Sin cambios");
+  });
+
+  test("updatePlayer: un viewer no escribe, un jugador de otro workspace es 404 y no se toca", async () => {
+    await fail(updatePlayer(await as_(users.viewerA), "pA", { goals: 3 }), 403);
+    await fail(updatePlayer(await as_(users.editorA), "pB", { goals: 3 }), 404);
+    await fail(updatePlayer(await as_(users.editorA), "no-existe", { goals: 3 }), 404);
+    expect(store.players.pA.goals).toBeUndefined();
+    expect(store.players.pB.goals).toBeUndefined();
+  });
+
+  test("addSuitor crea el club interesado y las analíticas de negociación lo ven", async () => {
+    const context = await as_(users.editorA);
+    expect(await addSuitor(context, "pA", { club: " Real Madrid ", need: 90 })).toMatchObject({ updated: false, row: { club: "Real Madrid", need: 90, playerId: "pA" } });
+    expect((await loadPlayer("pA")).suitors).toEqual([{ club: "Club de A", need: 50 }, { club: "Real Madrid", need: 90 }]);
+  });
+
+  test("addSuitor con un club ya listado (sin importar mayúsculas ni tildes) actualiza la necesidad en vez de duplicar", async () => {
+    const context = await as_(users.editorA);
+    expect(await addSuitor(context, "pA", { club: "  CLUB dé a ", need: 75 })).toMatchObject({ updated: true });
+    expect(Object.values(store.suitors).filter((row) => row.playerId === "pA")).toEqual([{ $id: "sA", playerId: "pA", club: "Club de A", need: 75 }]);
+  });
+
+  test("addSuitor: validación, rol y workspace", async () => {
+    const context = await as_(users.editorA);
+    for (const need of [101, -1, 5.5, "mucho", null]) await fail(addSuitor(context, "pA", { club: "X", need }), 400, "entero entre 0 y 100");
+    for (const club of ["", "   ", "x".repeat(121), undefined]) await fail(addSuitor(context, "pA", { club, need: 10 }), 400, "club");
+    await fail(addSuitor(await as_(users.viewerA), "pA", { club: "X", need: 10 }), 403);
+    await fail(addSuitor(context, "pB", { club: "X", need: 10 }), 404);
+    expect(Object.values(store.suitors).map((row) => row.club).sort()).toEqual(["Club de A", "Club de B"]);
+  });
+
+  test("removeSuitor quita solo ese club; uno que no está es 404; ajeno o sin permiso no toca nada", async () => {
+    const context = await as_(users.editorA);
+    await addSuitor(context, "pA", { club: "PSG", need: 40 });
+    await fail(removeSuitor(await as_(users.viewerA), "pA", "PSG"), 403);
+    await fail(removeSuitor(context, "pB", "Club de B"), 404);
+    await fail(removeSuitor(context, "pA", "Nadie FC"), 404, "interesados");
+    await removeSuitor(context, "pA", "psg");
+    expect(Object.values(store.suitors).map((row) => row.club).sort()).toEqual(["Club de A", "Club de B"]);
+  });
+
+  test("saveStaffSignal escribe SIEMPRE bajo el usuario que actúa y reemplaza su opinión", async () => {
+    const editor = await as_(users.editorA);
+    await saveStaffSignal(editor, "pA", { interest: "interested", notes: "Me gusta" });
+    await saveStaffSignal(editor, "pA", { interest: "not-interested", notes: "Ya no" });
+    await saveStaffSignal(await as_(users.adminA), "pA", { interest: "interested", notes: "Yo sí" });
+    const rows = Object.values(store.player_staff_signals).filter((row) => row.playerId === "pA" && [users.editorA.$id, users.adminA.$id].includes(row.userId));
+    expect(rows.map((row) => [row.userId, row.interest, row.notes]).sort()).toEqual([[users.adminA.$id, "interested", "Yo sí"], [users.editorA.$id, "not-interested", "Ya no"]]);
+    expect((await saveStaffSignal(editor, "pA", { interest: "inventado" })).interest).toBe("pending");
+    await fail(saveStaffSignal(await as_(users.viewerA), "pA", { interest: "interested" }), 403);
+    await fail(saveStaffSignal(editor, "pB", { interest: "interested" }), 404);
   });
 });
 

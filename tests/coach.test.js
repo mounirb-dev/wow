@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { CRITERIA, DEFAULT_WEIGHTS, FORMATIONS, checkLineup, decisionFor, decisionMatrix, normalizeWeights, per90, playerReport, positionGroup, squadAlerts, squadBalance, suggestLineup, suitability } from "../lib/coach.js";
+import { CRITERIA, DEFAULT_WEIGHTS, FORMATIONS, MIN_MATRIX_COVERAGE, checkLineup, decisionFor, decisionMatrix, normalizeWeights, per90, playerReport, positionGroup, squadAlerts, squadBalance, suggestLineup, suitability } from "../lib/coach.js";
 
 const inMonths = (n) => new Date(Date.now() + n * 30.44 * 864e5 + 864e5).toISOString();
 let counter = 0;
@@ -149,7 +149,8 @@ describe("decisionMatrix", () => {
     expect(row.parts.goals90).toBeNull();
     expect(row.missing).toEqual(expect.arrayContaining(["Goles por 90'", "Disponibilidad"]));
     expect(row.coverage).toBeLessThan(100);
-    expect(row.score).not.toBeNull();
+    // Solo encaje + edad + contrato (45 % del peso): hay cifra parcial, pero no una nota fiable.
+    expect(row.provisionalScore).not.toBeNull();
   });
   test("per 90 es relativo al máximo de la plantilla", () => {
     const top = rated({ minutes: 900, goals: 18 }), half = rated({ minutes: 900, goals: 9 });
@@ -169,6 +170,21 @@ describe("decisionMatrix", () => {
     expect(score(26)).toBe(100);
     expect(score(18)).toBeLessThan(score(24));
     expect(score(34)).toBeLessThan(score(29));
+  });
+  test("con poca cobertura no da una nota: solo edad y contrato no es un 100", () => {
+    const sparse = make({ age: 26, contractEnd: inMonths(44) });
+    const [row] = decisionMatrix([sparse]);
+    expect(row.coverage).toBeLessThan(MIN_MATRIX_COVERAGE);
+    expect(row).toMatchObject({ score: null, provisionalScore: 100, reliable: false });
+    expect(row.note).toContain("provisional");
+  });
+  test("los jugadores fiables van antes que los de poca cobertura, aunque la cifra parcial sea mayor", () => {
+    const sparse = make({ age: 26, contractEnd: inMonths(44) });
+    const solid = rated({ tacticalFit: 20, availability: 20 });
+    const rows = decisionMatrix([sparse, solid]);
+    expect(rows.map((row) => row.id)).toEqual([solid.id, sparse.id]);
+    expect(rows[0]).toMatchObject({ reliable: true, provisionalScore: null });
+    expect(rows[0].score).toBeLessThan(rows[1].provisionalScore);
   });
   test("lista vacía", () => expect(decisionMatrix([])).toEqual([]));
 });

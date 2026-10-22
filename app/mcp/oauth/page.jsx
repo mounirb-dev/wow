@@ -16,6 +16,11 @@ const permissions = [
   "Leer el resumen de la cartera",
   "Preparar informes de negociación",
 ];
+// Qué más puede hacer el cliente según lo que elija quien autoriza (lo impone el servidor, no el cliente).
+const scopes = [
+  { value: "read", title: "Solo lectura (recomendado)", detail: "Consultar y analizar. No puede cambiar nada." },
+  { value: "write", title: "Lectura y edición", detail: "Además puede añadir, editar y borrar jugadores, dejar tu opinión y apuntar clubes interesados. Siempre con tu rol en el workspace." },
+];
 const hiddenFields = ["client_id", "redirect_uri", "response_type", "code_challenge", "code_challenge_method", "state"];
 
 export default async function McpOAuthPage({ searchParams }) {
@@ -53,6 +58,10 @@ export default async function McpOAuthPage({ searchParams }) {
                   <li key={permission} className="flex items-start gap-3 text-sm text-muted-foreground"><span className="mt-0.5 grid size-4 shrink-0 place-items-center rounded-full bg-primary/15 text-primary"><Check className="size-3" aria-hidden="true" /></span>{permission}</li>
                 ))}</ul>
               </section>
+              <fieldset className="space-y-2">
+                <legend className="mb-1 text-sm font-medium">¿Qué puede hacer?</legend>
+                {scopes.map((scope) => <label key={scope.value} className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3 text-sm has-[:checked]:border-primary has-[:checked]:bg-primary/5"><input type="radio" name="scope" value={scope.value} defaultChecked={scope.value === "read"} className="mt-1" /><span><span className="block font-medium">{scope.title}</span><span className="block text-xs text-muted-foreground">{scope.detail}</span></span></label>)}
+              </fieldset>
               <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <Button type="submit" name="decision" value="deny" variant="ghost" className="text-muted-foreground">Cancelar</Button>
                 <Button type="submit" name="decision" value="allow" className="min-w-32">Autorizar acceso</Button>

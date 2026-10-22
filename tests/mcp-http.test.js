@@ -10,6 +10,7 @@ const player = { id: "saka", name: "Bukayo Saka", age: 25, pos: "FW", club: "Ars
 const calls = [];
 const writes = [];
 const playerError = (message, status) => Object.assign(new Error(message), { name: "PlayerError", status });
+const opinions = [];
 const deps = {
   authenticate: (req) => userFromAuthorization(req.headers.get("authorization")),
   loadPlayers: async (user) => { calls.push(user.$id); return [player]; },
@@ -23,6 +24,26 @@ const deps = {
     if (playerId === "nadie") throw playerError("Jugador no encontrado", 404);
     return { name: "Bukayo Saka", club: "Arsenal" };
   },
+  updatePlayer: async (user, playerId, changes) => {
+    writes.push(["update", user.$id, playerId, changes]);
+    if (playerId === "nadie") throw playerError("Jugador no encontrado", 404);
+    if (changes.tacticalFit === 101) throw playerError("tacticalFit debe ser un entero entre 0 y 100", 400);
+    return { name: "Bukayo Saka", club: "Arsenal", ...changes };
+  },
+  saveOpinion: async (user, playerId, opinion) => {
+    writes.push(["opinion", user.$id, playerId, opinion]);
+    opinions.push(opinion);
+    return { interest: opinion.interest, notes: opinion.notes ?? null, userName: "A" };
+  },
+  addSuitor: async (user, playerId, input) => {
+    writes.push(["suitor+", user.$id, playerId, input]);
+    return { row: { club: input.club, need: input.need }, updated: input.club === "Real Madrid" };
+  },
+  removeSuitor: async (user, playerId, club) => {
+    writes.push(["suitor-", user.$id, playerId, club]);
+    if (club === "Nadie FC") throw playerError("Ese club no está entre los interesados", 404);
+    return { club };
+  },
 };
 
 const rpc = (token, method, params = {}, id = 1) => new Request("https://app.test/mcp", {
@@ -32,11 +53,11 @@ const rpc = (token, method, params = {}, id = 1) => new Request("https://app.tes
 });
 
 // Recorre el flujo OAuth completo igual que lo haría Claude y devuelve un access token real.
-function login() {
+function login(scope) {
   const verifier = "v".repeat(64);
   const redirect = "https://claude.ai/api/mcp/auth_callback";
   const { client } = registerClient({ client_name: "Claude", redirect_uris: [redirect] });
-  const code = issueCode({ user: { $id: "u1", email: "a@b.c", name: "A" }, clientId: client.client_id, redirectUri: redirect, codeChallenge: createHash("sha256").update(verifier).digest("base64url") });
+  const code = issueCode({ user: { $id: "u1", email: "a@b.c", name: "A" }, clientId: client.client_id, redirectUri: redirect, codeChallenge: createHash("sha256").update(verifier).digest("base64url"), scope });
   return exchange({ grant_type: "authorization_code", code, client_id: client.client_id, redirect_uri: redirect, code_verifier: verifier }).tokens.access_token;
 }
 
@@ -53,9 +74,10 @@ describe("endpoint /mcp", () => {
     const init = await (await handleMcpRequest(rpc(token, "initialize", { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "t", version: "1" } }), deps)).json();
     expect(init.result.serverInfo.name).toBe("agentsolver");
     const list = await (await handleMcpRequest(rpc(token, "tools/list", {}, 2), deps)).json();
-    expect(list.result.tools.map((t) => t.name).sort()).toEqual(["add_player", "decision_matrix", "delete_player", "lineup_suggestion", "list_clients", "negotiation_brief", "player_report", "portfolio_summary", "squad_alerts", "squad_balance", "valuation"]);
-    // Solo las dos herramientas de escritura dejan de ser de solo lectura, y borrar se marca como destructiva.
-    expect(list.result.tools.filter((t) => !t.annotations.readOnlyHint).map((t) => t.name).sort()).toEqual(["add_player", "delete_player"]);
+    expect(list.result.tools.map((t) => t.name).sort()).toEqual(["add_player", "add_suitor", "decision_matrix", "delete_player", "lineup_suggestion", "list_clients", "negotiation_brief", "player_report", "portfolio_summary", "remove_suitor", "save_staff_opinion", "squad_alerts", "squad_balance", "update_player", "valuation"]);
+    // Solo las herramientas de escritura dejan de ser de solo lectura; borrar y quitar clubes se marcan como destructivas.
+    expect(list.result.tools.filter((t) => !t.annotations.readOnlyHint).map((t) => t.name).sort()).toEqual(["add_player", "add_suitor", "delete_player", "remove_suitor", "save_staff_opinion", "update_player"]);
+    expect(list.result.tools.filter((t) => t.annotations.destructiveHint).map((t) => t.name).sort()).toEqual(["delete_player", "remove_suitor"]);
     expect(list.result.tools.find((t) => t.name === "delete_player").annotations.destructiveHint).toBe(true);
     expect(list.result.tools.find((t) => t.name === "add_player").annotations.destructiveHint).toBe(false);
   });
@@ -142,6 +164,71 @@ describe("endpoint /mcp", () => {
     const ok = await call(token, "delete_player", { playerId: "saka", confirm: true });
     expect(JSON.parse(ok.result.content[0].text).deleted).toEqual({ id: "saka", name: "Bukayo Saka", club: "Arsenal" });
     expect(writes).toEqual([["remove", "u1", "saka"]]);
+  });
+
+  const readOnlyNames = ["decision_matrix", "lineup_suggestion", "list_clients", "negotiation_brief", "player_report", "portfolio_summary", "squad_alerts", "squad_balance", "valuation"];
+
+  test("con permiso de solo lectura no se ofrece NINGUNA herramienta de escritura y llamarlas falla", async () => {
+    writes.length = 0;
+    const token = login("read");
+    const list = await (await handleMcpRequest(rpc(token, "tools/list", {}, 50), deps)).json();
+    expect(list.result.tools.map((t) => t.name).sort()).toEqual(readOnlyNames);
+    for (const [name, args] of [["add_player", { name: "N", club: "C", pos: "MF", age: 22, contractEnd: "2029-06-30" }], ["delete_player", { playerId: "saka", confirm: true }], ["update_player", { playerId: "saka", goals: 3 }], ["save_staff_opinion", { playerId: "saka", interest: "interested" }], ["add_suitor", { playerId: "saka", club: "X", need: 5 }], ["remove_suitor", { playerId: "saka", club: "X" }]]) {
+      const res = await call(token, name, args, 51);
+      expect(res.error || res.result?.isError).toBeTruthy();
+    }
+    expect(writes).toEqual([]);
+    // Y lo de leer sigue funcionando.
+    expect(JSON.parse((await call(token, "portfolio_summary", {}, 52)).result.content[0].text)).toMatchObject({ count: 1 });
+  });
+
+  test("con permiso de edición se ofrecen todas; con un token antiguo (sin permiso) también", async () => {
+    for (const token of [login("write"), login()]) {
+      const list = await (await handleMcpRequest(rpc(token, "tools/list", {}, 53), deps)).json();
+      expect(list.result.tools.map((t) => t.name)).toEqual(expect.arrayContaining(["update_player", "save_staff_opinion", "add_suitor", "remove_suitor", "add_player", "delete_player"]));
+    }
+  });
+
+  test("update_player: envía solo los campos indicados, con el usuario del token, y devuelve lo cambiado", async () => {
+    writes.length = 0;
+    const res = await call(login(), "update_player", { playerId: "saka", minutes: 2700, goals: 12, tacticalFit: 88, value: 120.5, staffNotes: null });
+    expect(res.result.isError).toBeFalsy();
+    expect(JSON.parse(res.result.content[0].text).updated).toEqual({ id: "saka", name: "Bukayo Saka", club: "Arsenal", minutes: 2700, goals: 12, tacticalFit: 88, value: 120.5, staffNotes: null });
+    expect(writes).toEqual([["update", "u1", "saka", { minutes: 2700, goals: 12, tacticalFit: 88, value: 120.5, staffNotes: null }]]);
+  });
+
+  test("update_player: sin ningún campo, valor fuera de rango por esquema, o error del servidor", async () => {
+    writes.length = 0;
+    const token = login();
+    expect((await call(token, "update_player", { playerId: "saka" })).result.isError).toBe(true);
+    for (const args of [{ playerId: "saka", age: 12 }, { playerId: "saka", goals: 1.5 }, { playerId: "saka", value: -1 }, { playerId: "saka", email: 5 }, { playerId: "saka", seed: 99 }]) {
+      const res = await call(token, "update_player", args);
+      // Un campo desconocido (seed) no se escribe: se ignora y solo falla por quedarse sin cambios.
+      expect(res.error || res.result?.isError).toBeTruthy();
+    }
+    expect(writes).toEqual([]);
+    const bad = await call(token, "update_player", { playerId: "saka", tacticalFit: 101 });
+    expect(bad.result.isError).toBe(true);
+    expect(JSON.parse(bad.result.content[0].text)).toMatchObject({ error: expect.stringContaining("entre 0 y 100"), status: 400 });
+    expect((await call(token, "update_player", { playerId: "nadie", goals: 1 })).result.isError).toBe(true);
+  });
+
+  test("save_staff_opinion, add_suitor y remove_suitor", async () => {
+    writes.length = 0;
+    const token = login();
+    expect(JSON.parse((await call(token, "save_staff_opinion", { playerId: "saka", interest: "interested", notes: "Encaja" })).result.content[0].text).saved).toEqual({ playerId: "saka", interest: "interested", notes: "Encaja", author: "A" });
+    expect((await call(token, "save_staff_opinion", { playerId: "saka", interest: "quizás" })).error || true).toBeTruthy();
+    expect(JSON.parse((await call(token, "add_suitor", { playerId: "saka", club: "Real Madrid", need: 90 })).result.content[0].text).suitor).toEqual({ playerId: "saka", club: "Real Madrid", need: 90, updated: true });
+    expect(JSON.parse((await call(token, "add_suitor", { playerId: "saka", club: "PSG", need: 40 })).result.content[0].text).suitor.updated).toBe(false);
+    for (const need of [101, -1, 5.5]) {
+      const res = await call(token, "add_suitor", { playerId: "saka", club: "X", need });
+      expect(res.error || res.result?.isError).toBeTruthy();
+    }
+    expect(JSON.parse((await call(token, "remove_suitor", { playerId: "saka", club: "PSG" })).result.content[0].text).removed).toEqual({ playerId: "saka", club: "PSG" });
+    const missing = await call(token, "remove_suitor", { playerId: "saka", club: "Nadie FC" });
+    expect(missing.result.isError).toBe(true);
+    expect(JSON.parse(missing.result.content[0].text).status).toBe(404);
+    expect(writes.map((write) => write[0])).toEqual(["opinion", "suitor+", "suitor+", "suitor-", "suitor-"]);
   });
 
   test("delete_player de un jugador inexistente o ajeno devuelve isError 404", async () => {

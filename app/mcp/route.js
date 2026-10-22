@@ -4,7 +4,7 @@
 import { handleMcpRequest } from "@/lib/mcp-http.js";
 import { userFromAuthorization } from "@/lib/mcp-oauth.js";
 import { loadPlayersFor } from "@/lib/data.js";
-import { createPlayer, deletePlayer } from "@/lib/player-store.js";
+import { addSuitor, createPlayer, deletePlayer, removeSuitor, saveStaffSignal, updatePlayer } from "@/lib/player-store.js";
 import { resolveWorkspaceContext } from "@/lib/workspace.js";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +23,10 @@ const handle = (request) => handleMcpRequest(request, {
   loadPlayers: async (user) => loadPlayersFor(await contextOf(user)),
   addPlayer: async (user, input) => createPlayer(await contextOf(user), input),
   removePlayer: async (user, playerId) => deletePlayer(await contextOf(user), playerId),
+  updatePlayer: async (user, playerId, changes) => updatePlayer(await contextOf(user), playerId, changes),
+  saveOpinion: async (user, playerId, opinion) => saveStaffSignal(await contextOf(user), playerId, opinion),
+  addSuitor: async (user, playerId, input) => addSuitor(await contextOf(user), playerId, input),
+  removeSuitor: async (user, playerId, club) => removeSuitor(await contextOf(user), playerId, club),
 });
 
 export { handle as GET, handle as POST, handle as DELETE };
