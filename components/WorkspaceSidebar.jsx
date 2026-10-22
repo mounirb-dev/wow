@@ -124,10 +124,8 @@ function SidebarPanel({ mobile = false, onNavigate, workspace, canManage }) {
       <div className={`flex flex-1 flex-col gap-4 ${collapsed ? "items-center" : ""}`}>
         <div className={`w-full ${collapsed ? "flex justify-center" : ""}`}><SearchBox search={search} onSearch={setSearch} collapsed={collapsed} /></div>
         <nav className={`flex w-full flex-col gap-1 ${collapsed ? "items-center" : ""}`} aria-label="Navegación principal">
-          {groupLabel("Favoritos")}
-          {link({ href: "/", label: "Resumen", icon: LayoutDashboard })}
-          {groupLabel("Workspace", "mt-2")}
-          {navItems.filter((item) => matches(item.label, search)).map(link)}
+          {groupLabel("Workspace")}
+          {[{ href: "/", label: "Resumen", icon: LayoutDashboard }, ...navItems].filter((item) => matches(item.label, search)).map(link)}
         </nav>
       </div>
       <div className="mt-4 min-w-0 border-t pt-3"><WorkspaceMembersPanel collapsed={collapsed} /></div>
