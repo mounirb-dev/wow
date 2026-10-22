@@ -4,11 +4,12 @@ import { cn } from "@/lib/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import MotionProvider from "@/components/MotionProvider.jsx";
+import ThemeSync from "@/components/ThemeSync.jsx";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
-// Applies the saved theme before first paint so dark mode never flashes light on load.
-const themeScript = `try{var t=JSON.parse(localStorage.getItem("agentsolver-ui")).state.theme;document.documentElement.classList.toggle("dark",t==="dark")}catch(e){}`;
+// Applies the theme before first paint so it never flashes: saved choice, else the browser preference.
+const themeScript = `var t;try{var s=JSON.parse(localStorage.getItem("agentsolver-ui"));t=s.version>=1?s.state.theme:"system"}catch(e){}document.documentElement.classList.toggle("dark",t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches))`;
 
 export const metadata = { title: "AgentSolver", description: "Tu cartera de jugadores, valorada como activos." };
 
@@ -21,6 +22,7 @@ export default function RootLayout({ children }) {
       <body>
         <MotionProvider><TooltipProvider delayDuration={150}>{children}</TooltipProvider></MotionProvider>
         <Toaster />
+        <ThemeSync />
       </body>
     </html>
   );

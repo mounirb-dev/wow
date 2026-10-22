@@ -39,7 +39,7 @@ export default function ModernAnimatedSignIn({ error, next = "/" }) {
             <label className="flex flex-col gap-2 text-sm font-medium" htmlFor="password">Contraseña
               <span className="relative"><Input id="password" name="password" type={showPassword ? "text" : "password"} required autoComplete="current-password" placeholder="Tu contraseña" className="h-12 border-input bg-background pr-12 text-foreground placeholder:text-muted-foreground" /><button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}>{showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}</button></span>
             </label>
-            {error && <p role="alert" className="rounded-lg border border-red-900/70 bg-red-950/30 p-3 text-xs leading-5 text-red-300">{decodeURIComponent(error)}</p>}
+            {error && <p role="alert" className="rounded-lg border border-red-300 bg-red-50 p-3 text-xs leading-5 text-red-700 dark:border-red-900/70 dark:bg-red-950/30 dark:text-red-300">{decodeURIComponent(error)}</p>}
             <Button type="submit" className="h-12 bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90">Entrar<ArrowRight data-icon="inline-end" /></Button>
             <Link href="/forgot-password" className="text-center text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground">¿Has olvidado tu contraseña?</Link>
           </form>

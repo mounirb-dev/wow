@@ -1,17 +1,17 @@
 "use client"
 
-import { useUiStore } from "@/lib/ui-store.js"
+import { useDark } from "@/lib/use-dark.js"
 import { Toaster as Sonner } from "sonner";
 import { CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
 
 const Toaster = ({
   ...props
 }) => {
-  const theme = useUiStore((state) => state.theme)
+  const dark = useDark()
 
   return (
     <Sonner
-      theme={theme === "dark" ? "dark" : "light"}
+      theme={dark ? "dark" : "light"}
       className="toaster group"
       icons={{
         success: (

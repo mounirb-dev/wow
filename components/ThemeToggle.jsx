@@ -1,18 +1,13 @@
 "use client";
 
 import { Moon, Sun } from "lucide-react";
-import { useEffect } from "react";
 import { AnimatePresence, m } from "motion/react";
 import { useUiStore } from "@/lib/ui-store.js";
+import { useDark } from "@/lib/use-dark.js";
 
 export default function ThemeToggle({ compact = false }) {
-  const theme = useUiStore((state) => state.theme);
   const setTheme = useUiStore((state) => state.setTheme);
-  const dark = theme === "dark";
-
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", dark);
-  }, [dark]);
+  const dark = useDark();
 
   function toggle() {
     const next = !dark;
