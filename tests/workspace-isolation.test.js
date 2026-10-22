@@ -778,3 +778,67 @@ describe("comentarios del staff en la ficha", () => {
     expect(staffComments(await loadPlayerStaffData("pA")).opinions.map((item) => item.notes)).toContain("visible para todos");
   });
 });
+
+describe("editar datos de un jugador", () => {
+  beforeEach(seed);
+  const patch = (body, id = "pA") => players.PATCH(json("PATCH", body), params({ id }));
+
+  test("un editor guarda teléfono, email, ubicación y representante, y la ficha los expone", async () => {
+    const res = await patch({ phone: "+34 600 111 222", email: "Jugador@Club.es", location: "Sevilla", agentName: "Juan Pérez", agentPhone: "+34 611 222 333" });
+    expect(res.status).toBe(200);
+    expect(store.players.pA).toMatchObject({ phone: "+34 600 111 222", email: "jugador@club.es", location: "Sevilla", agentName: "Juan Pérez", agentPhone: "+34 611 222 333" });
+    expect(await loadPlayer("pA")).toMatchObject({ phone: "+34 600 111 222", email: "jugador@club.es", location: "Sevilla", agentName: "Juan Pérez", agentPhone: "+34 611 222 333" });
+  });
+
+  test("un jugador sin datos de contacto los expone como null, no como undefined", async () => {
+    expect(await loadPlayer("pA")).toMatchObject({ phone: null, email: null, location: null, agentName: null, agentPhone: null });
+  });
+
+  test("también se editan los datos básicos y económicos", async () => {
+    expect((await patch({ name: "Nombre Nuevo", club: "Otro Club", pos: "ST", age: 30, contractEnd: "2031-06-30", value: "20,5", salary: "4", fair: "18" })).status).toBe(200);
+    expect(store.players.pA).toMatchObject({ name: "Nombre Nuevo", club: "Otro Club", pos: "FW", age: 30, contractEnd: "2031-06-30T00:00:00.000Z", value: 20.5, salary: 4, fair: 18 });
+  });
+
+  test("un campo vacío borra el dato", async () => {
+    await patch({ phone: "+34 600 111 222" });
+    expect((await patch({ phone: "" })).status).toBe(200);
+    expect(store.players.pA.phone).toBeNull();
+  });
+
+  test("datos inválidos: 400 y no se guarda NADA, ni lo válido del mismo envío", async () => {
+    const res = await patch({ phone: "+34 600 111 222", email: "no-es-un-email" });
+    expect(res.status).toBe(400);
+    expect(store.players.pA.phone).toBeUndefined();
+    expect(store.players.pA.email).toBeUndefined();
+  });
+
+  test("renombrar a un jugador que ya existe (mismo nombre y club) es 409", async () => {
+    store.players.pA2 = { ...store.players.pA, $id: "pA2", name: "Otro Jugador" };
+    expect((await patch({ name: "  otro JUGADOR ", club: "club" })).status).toBe(409);
+    expect(store.players.pA.name).toBe("Jugador pA");
+    // Guardar sin cambiar nombre ni club no choca consigo mismo.
+    expect((await patch({ name: "Jugador pA", phone: "+34 600 111 222" })).status).toBe(200);
+  });
+
+  test("el mismo nombre y club en otro workspace no es duplicado", async () => {
+    store.players.pB.name = "Gemelo";
+    store.players.pB.club = "Club X";
+    expect((await patch({ name: "Gemelo", club: "Club X" })).status).toBe(200);
+  });
+
+  test("el viewer no puede editar, un jugador ajeno es 404 y sin sesión 401", async () => {
+    as(users.viewerA);
+    expect((await patch({ phone: "+34 600 111 222" })).status).toBe(403);
+    as(users.editorA);
+    expect((await patch({ phone: "+34 600 111 222" }, "pB")).status).toBe(404);
+    expect(store.players.pB.phone).toBeUndefined();
+    as(null);
+    expect((await patch({ phone: "+34 600 111 222" })).status).toBe(401);
+    expect(store.players.pA.phone).toBeUndefined();
+  });
+
+  test("no se pueden cambiar campos internos desde el cuerpo", async () => {
+    expect((await patch({ workspaceId: "wsB", seed: 99, momentum: 1 })).status).toBe(400);
+    expect(store.players.pA.workspaceId).toBe("wsA");
+  });
+});

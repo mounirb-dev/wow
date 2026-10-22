@@ -18,5 +18,5 @@ export default async function PlayerPage({ params }) {
   const { id } = await params;
   const [player, context] = await Promise.all([loadPlayer(id), getWorkspaceContext()]);
   if (!player) notFound();
-  return <WorkspaceShell><PlayerProfile player={player} canDelete={Boolean(canEdit(context?.member))} /></WorkspaceShell>;
+  return <WorkspaceShell><PlayerProfile player={player} canEdit={Boolean(canEdit(context?.member))} /></WorkspaceShell>;
 }

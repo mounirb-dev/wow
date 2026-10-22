@@ -8,11 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { request } from "@/lib/api-client.js";
-
-const POSITIONS = [["GK", "Portero"], ["DF", "Defensa"], ["MF", "Centrocampista"], ["FW", "Delantero"]];
-const selectClass = "h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";
-
-const Field = ({ label, children }) => <label className="grid gap-1.5 text-sm font-medium"><span>{label}</span>{children}</label>;
+import { Field } from "./PlayerFormFields.jsx";
+import { POSITIONS, selectClass } from "./player-form-styles.js";
 
 // Alta rápida de un jugador: solo los cinco datos que el sistema necesita. El resto (valor,
 // salario, rendimiento…) queda vacío hasta que haya una fuente; nunca se inventa.
