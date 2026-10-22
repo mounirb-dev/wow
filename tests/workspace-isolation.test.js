@@ -326,6 +326,40 @@ describe("aislamiento: escrituras y acceso por id", () => {
     expect(store.workspace_members.mOtherB.role).toBe("editor");
   });
 
+  test("miembros: un admin quita a un miembro o cancela una invitación; el workspace sigue intacto", async () => {
+    store.workspace_members.mEditorA.role = "admin";
+    store.workspace_members.mInvitada = { $id: "mInvitada", workspaceId: "wsA", userId: "invite_x", email: "invitada@a.test", name: "Invitada", role: "viewer", status: "invited" };
+    const before = Object.keys(store.workspace_members).filter((id) => store.workspace_members[id].workspaceId === "wsB");
+    expect((await member.DELETE(json("DELETE"), params({ id: "mViewerA" }))).status).toBe(200);
+    expect((await member.DELETE(json("DELETE"), params({ id: "mInvitada" }))).status).toBe(200);
+    expect(store.workspace_members.mViewerA).toBeUndefined();
+    expect(store.workspace_members.mInvitada).toBeUndefined();
+    expect(Object.keys(store.workspace_members).filter((id) => store.workspace_members[id].workspaceId === "wsB")).toEqual(before);
+    // Quitar a alguien no toca sus datos: solo pierde el acceso (sin membresía ni invitación, la herramienta lo bloquea).
+    expect(await resolveWorkspaceContext(users.viewerA)).toBeNull();
+  });
+
+  test("miembros: no se puede quitar al propietario ni a uno mismo", async () => {
+    store.workspace_members.mAdminA.role = "owner";
+    store.workspace_members.mEditorA.role = "admin";
+    expect((await member.DELETE(json("DELETE"), params({ id: "mAdminA" }))).status).toBe(400);
+    expect((await member.DELETE(json("DELETE"), params({ id: "mEditorA" }))).status).toBe(400);
+    expect(store.workspace_members.mAdminA).toBeDefined();
+    expect(store.workspace_members.mEditorA).toBeDefined();
+  });
+
+  test("miembros: un editor o un viewer no pueden quitar a nadie", async () => {
+    expect((await member.DELETE(json("DELETE"), params({ id: "mViewerA" }))).status).toBe(403);
+    as(users.viewerA);
+    expect((await member.DELETE(json("DELETE"), params({ id: "mEditorA" }))).status).toBe(403);
+    expect(store.workspace_members.mViewerA).toBeDefined();
+    expect(store.workspace_members.mEditorA).toBeDefined();
+  });
+
+  test("miembros: la lista indica cuál es la fila del propio usuario", async () => {
+    expect((await (await members.GET()).json()).viewerId).toBe("mEditorA");
+  });
+
   test("miembros: un id inexistente responde igual que uno ajeno (404), sin lanzar", async () => {
     store.workspace_members.mEditorA.role = "admin";
     expect((await member.PATCH(json("PATCH", { role: "viewer" }), params({ id: "no-existe" }))).status).toBe(404);

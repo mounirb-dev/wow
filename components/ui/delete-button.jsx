@@ -17,8 +17,11 @@ const WALL_TOP = 6;
 const WALL_TOP_OPEN = 13.5;
 const WALL_BASE = 20;
 
-const TILE = 48;
-const PANEL = 84;
+// md = botón grande (48 px); sm = compacto (32 px) para filas de listas y paneles.
+const SIZES = {
+  md: { tile: 48, panel: 84, round: "rounded-2xl", box: "h-12 w-12 rounded-2xl", root: "h-12 rounded-2xl", icon: 20, circle: "h-7 w-7", glyph: 14 },
+  sm: { tile: 32, panel: 58, round: "rounded-xl", box: "h-8 w-8 rounded-xl", root: "h-8 rounded-xl", icon: 16, circle: "h-5 w-5", glyph: 10 },
+};
 const HOLD = { deleted: 1400, kept: 600 };
 
 const EASE = [0.32, 0.72, 0, 1];
@@ -76,7 +79,7 @@ const ACCENT = "#FF5F2E";
 const LIFT =
   "shadow-[0_0.5px_1px_rgba(0,0,0,0.05),0_1px_3px_rgba(0,0,0,0.08),inset_0_0.5px_0_rgba(255,255,255,0.9)] dark:shadow-[0_0.5px_1px_rgba(0,0,0,0.35),0_1.5px_4px_rgba(0,0,0,0.25),inset_0_0.5px_0_rgba(255,255,255,0.07)]";
 
-const CIRCLE = `grid h-7 w-7 place-items-center rounded-full transition-colors duration-200 hover:bg-[#FAFAFD] dark:hover:bg-[#2C2C2C] ${FOCUS} ${SURFACE} ${LIFT}`;
+const CIRCLE = `grid place-items-center rounded-full transition-colors duration-200 hover:bg-[#FAFAFD] dark:hover:bg-[#2C2C2C] ${FOCUS} ${SURFACE} ${LIFT}`;
 
 const ICON = {
   viewBox: "0 0 24 24",
@@ -99,6 +102,7 @@ const circleMotion = {
 function Circle({
   label,
   onClick,
+  size,
   children
 }) {
   const reduced = useReducedMotion() ?? false;
@@ -112,12 +116,12 @@ function Circle({
         whileHover={reduced ? undefined : { scale: 1.03 }}
         whileTap={reduced ? undefined : { scale: 0.84 }}
         transition={PRESS}
-        className={CIRCLE}
+        className={cn(CIRCLE, size.circle)}
       >
         <svg
           {...ICON}
-          width="14"
-          height="14"
+          width={size.glyph}
+          height={size.glyph}
           stroke="currentColor"
           strokeWidth="3.5"
         >
@@ -148,13 +152,13 @@ function useBin(open, reduced) {
 }
 
 // the width is a motion value rather than an animate prop, so it is driven from one place
-function useTileWidth(open, reduced) {
-  const width = useMotionValue(TILE);
+function useTileWidth(open, reduced, size) {
+  const width = useMotionValue(size.tile);
 
   useEffect(() => {
-    const grow = animate(width, open ? TILE + PANEL : TILE, reduced ? INSTANT : WIDTH);
+    const grow = animate(width, open ? size.tile + size.panel : size.tile, reduced ? INSTANT : WIDTH);
     return () => grow.stop();
-  }, [open, reduced, width]);
+  }, [open, reduced, width, size]);
 
   return width;
 }
@@ -179,13 +183,13 @@ function useStatus(reduced, settle) {
   return [status, setStatus];
 }
 
-function Done({ reduced }) {
+function Done({ reduced, size }) {
   return (
     <m.svg
       key="done"
       {...ICON}
-      width="20"
-      height="20"
+      width={size.icon}
+      height={size.icon}
       stroke={ACCENT}
       strokeWidth="2.5"
       initial={{ opacity: 0, scale: 0.6 }}
@@ -203,13 +207,13 @@ function Done({ reduced }) {
   );
 }
 
-function Bin({ path, settle, open, reduced }) {
+function Bin({ path, settle, open, reduced, size }) {
   return (
     <m.svg
       key="bin"
       {...ICON}
-      width="20"
-      height="20"
+      width={size.icon}
+      height={size.icon}
       stroke="currentColor"
       strokeWidth="2"
       className="overflow-visible"
@@ -232,13 +236,14 @@ function Bin({ path, settle, open, reduced }) {
   );
 }
 
-function Confirm({ reduced, onConfirm, onCancel }) {
+function Confirm({ reduced, size, onConfirm, onCancel }) {
   return (
     <m.div
       key="panel"
-      style={{ width: PANEL }}
+      style={{ width: size.panel }}
       className={cn(
-        "absolute inset-y-0 right-0 flex items-center justify-center gap-2 rounded-2xl",
+        "absolute inset-y-0 right-0 flex items-center justify-center gap-2",
+        size.round,
         RECESS,
       )}
       variants={reduced ? undefined : panelMotion}
@@ -253,31 +258,33 @@ function Confirm({ reduced, onConfirm, onCancel }) {
           RECESS,
         )}
       />
-      <Circle label="Confirmar borrado" onClick={onConfirm}>
+      <Circle label="Confirmar borrado" size={size} onClick={onConfirm}>
         <path d="M4 12.5 9.5 18 20 7" stroke={ACCENT} />
       </Circle>
-      <Circle label="Cancelar" onClick={onCancel}>
+      <Circle label="Cancelar" size={size} onClick={onCancel}>
         <path d="M6 6 18 18M18 6 6 18" />
       </Circle>
     </m.div>
   );
 }
 
-// `label` names the trigger for screen readers. `onConfirm` may be async: the check mark only shows when it does
+// `size`: "md" (default) or "sm", a compact version for list rows. `label` names the trigger for screen readers. `onConfirm` may be async: the check mark only shows when it does
 // not resolve to `false`, so a failed delete does not look like a successful one.
 export function DeleteButton({
   className,
   label = "Borrar",
+  size: sizeName = "md",
   onConfirm,
   onCancel,
   ...props
 }) {
+  const size = SIZES[sizeName] ?? SIZES.md;
   const reduced = useReducedMotion() ?? false;
   const [open, setOpen] = useState(false);
   const trigger = useRef(null);
 
   const { path, settle } = useBin(open, reduced);
-  const width = useTileWidth(open, reduced);
+  const width = useTileWidth(open, reduced, size);
   const [status, setStatus] = useStatus(reduced, settle);
 
   const resolve = async (next) => {
@@ -304,7 +311,7 @@ export function DeleteButton({
       data-slot="delete-button"
       data-state={open ? "open" : "closed"}
       data-status={status}
-      className={cn("relative h-12 rounded-2xl", SURFACE, GLYPH, className)}
+      className={cn("relative", size.root, SURFACE, GLYPH, className)}
       style={{ width }}
       onKeyDown={(event) => {
         if (event.key === "Escape" && open) resolve("kept");
@@ -321,15 +328,16 @@ export function DeleteButton({
         whileTap={reduced ? undefined : { scale: 0.94 }}
         transition={TAP}
         className={cn(
-          "relative z-10 grid h-12 w-12 place-items-center rounded-2xl",
+          "relative z-10 grid place-items-center",
+          size.box,
           FOCUS,
         )}
       >
         <AnimatePresence mode="wait" initial={false}>
           {status === "deleted" ? (
-            <Done key="done" reduced={reduced} />
+            <Done key="done" reduced={reduced} size={size} />
           ) : (
-            <Bin key="bin" path={path} settle={settle} open={open} reduced={reduced} />
+            <Bin key="bin" path={path} settle={settle} open={open} reduced={reduced} size={size} />
           )}
         </AnimatePresence>
       </m.button>
@@ -343,6 +351,7 @@ export function DeleteButton({
           <Confirm
             key="panel"
             reduced={reduced}
+            size={size}
             onConfirm={() => resolve("deleted")}
             onCancel={() => resolve("kept")}
           />

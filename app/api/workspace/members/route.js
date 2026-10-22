@@ -12,7 +12,8 @@ export async function GET() {
   const context = await getWorkspaceContext();
   if (!context) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   const { rows } = await context.db.listRows(DB, "workspace_members", [Query.equal("workspaceId", context.workspace.$id), Query.orderAsc("name"), Query.limit(200)]);
-  return NextResponse.json({ members: rows });
+  // `viewerId`: la fila del propio usuario, para que la interfaz no ofrezca quitarse a sí mismo.
+  return NextResponse.json({ members: rows, viewerId: context.member.$id });
 }
 
 export async function POST(request) {

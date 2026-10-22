@@ -26,7 +26,8 @@ Cada punto se mira en la pantalla **y** en el servidor/Storage.
 ### Acceso por invitación
 1. Una cuenta sin invitación que inicia sesión llega a `/acceso` («Todavía no tienes acceso») y no ve datos; `/api/workspace/files` responde 401. Se puede probar creando un usuario de prueba en el Appwrite local (borra después el usuario y las filas que cree el alta).
 2. **Email de onboarding**: `bun run club:invite -- email "Club"` (o invitar desde «Compartir workspace») deja un email en Mailpit (`http://localhost:8025`) con un enlace a `/onboarding`; el formulario valida nombre, contraseña (mín. 8) y que coincidan, crea la cuenta y entra al workspace; el mismo enlace una segunda vez da «Este enlace ya no vale»; después se puede entrar con email + contraseña. Si el email no sale, la invitación se crea y el aviso lo dice.
-3. `bun run club:invite -- email "Club"`: con el email SIN verificar sigue en `/acceso`; al verificarlo (o entrando con Google) aparece el workspace del club. Repetir el comando responde `exists`.
+3. **Quitar miembros** («Compartir workspace», owner/admin): la papelera aparece junto a cada miembro salvo el propietario y uno mismo; ✓ lo quita (o cancela la invitación) y deja de poder entrar; un editor/viewer no puede.
+4. `bun run club:invite -- email "Club"`: con el email SIN verificar sigue en `/acceso`; al verificarlo (o entrando con Google) aparece el workspace del club. Repetir el comando responde `exists`.
 
 ### Carpetas
 1. «Nueva carpeta» crea la carpeta y la deja seleccionada.

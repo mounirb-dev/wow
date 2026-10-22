@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { UserPlus, Users, X } from "lucide-react";
+import { DeleteButton } from "@/components/ui/delete-button";
 
 const JSON_HEADERS = { "content-type": "application/json" };
 const fieldClass = "rounded-md border bg-background px-3 py-2 text-sm";
@@ -17,6 +18,7 @@ export default function WorkspaceMembersPanel({ collapsed = false }) {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("viewer");
   const [members, setMembers] = useState([]);
+  const [viewerId, setViewerId] = useState(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -24,7 +26,7 @@ export default function WorkspaceMembersPanel({ collapsed = false }) {
     dialogRef.current?.showModal();
     try {
       const response = await fetch("/api/workspace/members");
-      if (response.ok) setMembers((await response.json()).members);
+      if (response.ok) { const payload = await response.json(); setMembers(payload.members); setViewerId(payload.viewerId ?? null); }
       else setMessage("No se pudieron cargar los miembros");
     } catch {
       setMessage("No se pudieron cargar los miembros");
@@ -56,6 +58,21 @@ export default function WorkspaceMembersPanel({ collapsed = false }) {
     mutate(`/api/workspace/members/${id}`, "PATCH", { role: nextRole }, (payload) => setMembers((current) => current.map((member) => member.$id === id ? payload.member : member)), "No se pudo cambiar el rol");
   }
 
+  // Quita a alguien del workspace (o cancela su invitación). Devuelve false si falla, para que el botón no muestre el ✓.
+  async function remove(member) {
+    setMessage("");
+    try {
+      const response = await fetch(`/api/workspace/members/${member.$id}`, { method: "DELETE" });
+      if (!response.ok) { setMessage((await response.json().catch(() => ({}))).error || "No se pudo quitar"); return false; }
+      setMembers((current) => current.filter((item) => item.$id !== member.$id));
+      setMessage(member.status === "invited" ? "Invitación cancelada" : "Miembro quitado: ya no puede entrar al workspace");
+      return true;
+    } catch {
+      setMessage("No se pudo quitar");
+      return false;
+    }
+  }
+
   return <>
     <button onClick={show} type="button" title={collapsed ? "Compartir workspace" : undefined} className={`flex h-8 w-full min-w-0 items-center gap-3 rounded-md text-left text-sm text-muted-foreground transition hover:bg-secondary hover:text-foreground ${collapsed ? "justify-center px-0" : "px-3"}`}>
       <Users className="size-4 shrink-0" aria-hidden="true" />
@@ -74,6 +91,7 @@ export default function WorkspaceMembersPanel({ collapsed = false }) {
       <div className="mt-5 divide-y rounded-lg border">{members.map((member) => <div key={member.$id} className="flex items-center justify-between gap-3 p-3">
         <div className="min-w-0"><p className="truncate text-sm font-medium">{member.name}</p><p className="truncate text-xs text-muted-foreground">{member.email} · {member.status}</p></div>
         <select aria-label={`Permiso de ${member.name}`} disabled={member.role === "owner" || busy} value={member.role} onChange={(event) => changeRole(member.$id, event.target.value)} className="rounded-md border bg-background px-2 py-1 text-xs"><option value="owner">Propietario</option><option value="admin">Admin</option><option value="editor">Editor</option><option value="viewer">Solo lectura</option></select>
+        {member.role !== "owner" && member.$id !== viewerId && <DeleteButton size="sm" label={`Quitar a ${member.name}`} title={member.status === "invited" ? "Cancela la invitación" : "Le quita el acceso a este workspace"} onConfirm={() => remove(member)} className="shrink-0" />}
       </div>)}</div>
       {message && <p className="mt-3 text-xs text-muted-foreground" role="status">{message}</p>}
     </dialog>

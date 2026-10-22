@@ -1,5 +1,6 @@
-// PATCH (cambiar rol) / DELETE (expulsar) de un miembro, solo owner/admin. El owner no se puede
-// modificar desde aquí.
+// PATCH (cambiar rol) / DELETE (quitar del workspace o cancelar una invitación) de un miembro, solo
+// owner/admin. El owner no se puede modificar y nadie puede quitarse a sí mismo (no quedar sin acceso).
+// Quitar a alguien no borra su cuenta de Appwrite: solo pierde el acceso (la herramienta es por invitación).
 import { NextResponse } from "next/server";
 import { DB } from "@/lib/appwrite.js";
 import { canManage, getWorkspaceContext, normalizeRole } from "@/lib/workspace.js";
@@ -30,6 +31,7 @@ export async function DELETE(request, { params }) {
   const member = await findMember(context, id);
   if (!member) return NextResponse.json({ error: "Miembro no encontrado" }, { status: 404 });
   if (member.role === "owner") return NextResponse.json({ error: "El propietario no puede eliminarse" }, { status: 400 });
+  if (member.$id === context.member.$id) return NextResponse.json({ error: "No puedes quitarte a ti mismo" }, { status: 400 });
   await context.db.deleteRow(DB, "workspace_members", id);
   return NextResponse.json({ ok: true });
 }
