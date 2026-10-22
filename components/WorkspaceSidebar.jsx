@@ -82,8 +82,9 @@ function WorkspaceHeader({ workspace, canManage, collapsed, mobile }) {
     input.value = "";
   }
 
-  const iconClass = "relative grid size-8 shrink-0 place-items-center overflow-hidden rounded-md bg-primary text-xs font-semibold text-primary-foreground";
-  const iconContent = workspace.iconUrl ? <img src={workspace.iconUrl} alt="" className="size-full object-cover" /> : "AS";
+  // Con escudo, el fondo sigue al tema (claro/oscuro) para que el logo se vea sobre cualquier fondo; sin él, el color primario.
+  const iconClass = `relative grid size-8 shrink-0 place-items-center overflow-hidden rounded-md text-xs font-semibold ${workspace.iconUrl ? "border bg-background text-foreground" : "bg-primary text-primary-foreground"}`;
+  const iconContent = workspace.iconUrl ? <img src={workspace.iconUrl} alt="" className="size-full object-contain p-0.5" /> : "AS";
 
   return <header className={`flex min-w-0 items-center gap-2 px-1 pb-4 ${collapsed ? "flex-col" : "justify-between"}`}>
     <div className={`flex min-w-0 flex-1 items-center gap-2 ${collapsed ? "flex-col" : ""}`}>
