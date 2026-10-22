@@ -61,7 +61,7 @@ Para Apple añade también `APPLE_SERVICE_ID`, `APPLE_KEY_ID`, `APPLE_TEAM_ID` y
 
 ## Servidor MCP (remoto, con OAuth)
 
-El MCP es un endpoint HTTP en **`/mcp`** (Streamable HTTP, sin estado) protegido con OAuth 2.1 + PKCE. Cada usuario autoriza el acceso con su cuenta y solo ve los datos de su workspace. Herramientas (solo lectura): `list_clients`, `portfolio_summary`, `valuation`, `negotiation_brief` y, para el cuerpo técnico, `squad_alerts`, `squad_balance`, `lineup_suggestion`, `decision_matrix` y `player_report`.
+El MCP es un endpoint HTTP en **`/mcp`** (Streamable HTTP, sin estado) protegido con OAuth 2.1 + PKCE. Cada usuario autoriza el acceso con su cuenta y solo ve los datos de su workspace. Herramientas de lectura: `list_clients`, `portfolio_summary`, `valuation`, `negotiation_brief` y, para el cuerpo técnico, `squad_alerts`, `squad_balance`, `lineup_suggestion`, `decision_matrix` y `player_report`. Herramientas de escritura (respetan el rol: un viewer no puede usarlas): `add_player` (nombre, club, posición, edad y fin de contrato; rechaza duplicados) y `delete_player` (borrado real en cascada; exige `confirm: true`).
 
 **Conectar Claude** (web, escritorio o móvil): Ajustes → Conectores → *Añadir conector personalizado* → URL `https://TU-DOMINIO/mcp`. Claude descubre el OAuth solo (`/.well-known/oauth-*`), te lleva a `/mcp/oauth` para iniciar sesión y pulsar *Autorizar acceso*.
 

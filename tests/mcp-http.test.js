@@ -8,7 +8,22 @@ beforeAll(() => { process.env.MCP_OAUTH_SECRET = "test-secret-no-usar-en-producc
 
 const player = { id: "saka", name: "Bukayo Saka", age: 25, pos: "FW", club: "Arsenal", contractEnd: new Date(Date.now() + 10 * 30.44 * 864e5).toISOString(), value: 100, salary: 10, fair: 12, momentum: 0.7, suitors: [{ club: "Real Madrid", need: 90 }] };
 const calls = [];
-const deps = { authenticate: (req) => userFromAuthorization(req.headers.get("authorization")), loadPlayers: async (user) => { calls.push(user.$id); return [player]; } };
+const writes = [];
+const playerError = (message, status) => Object.assign(new Error(message), { name: "PlayerError", status });
+const deps = {
+  authenticate: (req) => userFromAuthorization(req.headers.get("authorization")),
+  loadPlayers: async (user) => { calls.push(user.$id); return [player]; },
+  addPlayer: async (user, input) => {
+    writes.push(["add", user.$id, input]);
+    if (input.name === "Repetido") throw playerError("Ya tienes un jugador con ese nombre y club", 409);
+    return { $id: "nuevo1", ...input, pos: "FW" };
+  },
+  removePlayer: async (user, playerId) => {
+    writes.push(["remove", user.$id, playerId]);
+    if (playerId === "nadie") throw playerError("Jugador no encontrado", 404);
+    return { name: "Bukayo Saka", club: "Arsenal" };
+  },
+};
 
 const rpc = (token, method, params = {}, id = 1) => new Request("https://app.test/mcp", {
   method: "POST",
@@ -38,8 +53,11 @@ describe("endpoint /mcp", () => {
     const init = await (await handleMcpRequest(rpc(token, "initialize", { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "t", version: "1" } }), deps)).json();
     expect(init.result.serverInfo.name).toBe("agentsolver");
     const list = await (await handleMcpRequest(rpc(token, "tools/list", {}, 2), deps)).json();
-    expect(list.result.tools.map((t) => t.name).sort()).toEqual(["decision_matrix", "lineup_suggestion", "list_clients", "negotiation_brief", "player_report", "portfolio_summary", "squad_alerts", "squad_balance", "valuation"]);
-    expect(list.result.tools.every((t) => t.annotations.readOnlyHint)).toBe(true);
+    expect(list.result.tools.map((t) => t.name).sort()).toEqual(["add_player", "decision_matrix", "delete_player", "lineup_suggestion", "list_clients", "negotiation_brief", "player_report", "portfolio_summary", "squad_alerts", "squad_balance", "valuation"]);
+    // Solo las dos herramientas de escritura dejan de ser de solo lectura, y borrar se marca como destructiva.
+    expect(list.result.tools.filter((t) => !t.annotations.readOnlyHint).map((t) => t.name).sort()).toEqual(["add_player", "delete_player"]);
+    expect(list.result.tools.find((t) => t.name === "delete_player").annotations.destructiveHint).toBe(true);
+    expect(list.result.tools.find((t) => t.name === "add_player").annotations.destructiveHint).toBe(false);
   });
 
   test("tools/call usa el usuario del token para cargar los datos", async () => {
@@ -83,5 +101,52 @@ describe("endpoint /mcp", () => {
   test("argumentos inválidos se rechazan por esquema", async () => {
     const res = await (await handleMcpRequest(rpc(login(), "tools/call", { name: "valuation", arguments: { playerId: 7 } }, 7), deps)).json();
     expect(res.error || res.result?.isError).toBeTruthy();
+  });
+
+  const call = async (token, name, args, id = 40) => (await handleMcpRequest(rpc(token, "tools/call", { name, arguments: args }, id), deps)).json();
+
+  test("sin funciones de escritura inyectadas no se ofrecen add_player ni delete_player", async () => {
+    const list = await (await handleMcpRequest(rpc(login(), "tools/list", {}, 30), { authenticate: deps.authenticate, loadPlayers: deps.loadPlayers })).json();
+    expect(list.result.tools.every((t) => t.annotations.readOnlyHint)).toBe(true);
+  });
+
+  test("add_player crea el jugador con el usuario del token y devuelve su id", async () => {
+    writes.length = 0;
+    const res = await call(login(), "add_player", { name: "Nuevo", club: "Club", pos: "ST", age: 22, contractEnd: "2029-06-30" });
+    expect(res.result.isError).toBeFalsy();
+    expect(JSON.parse(res.result.content[0].text).added).toMatchObject({ id: "nuevo1", name: "Nuevo", pos: "FW" });
+    expect(writes).toEqual([["add", "u1", { name: "Nuevo", club: "Club", pos: "ST", age: 22, contractEnd: "2029-06-30" }]]);
+  });
+
+  test("add_player: duplicado o rol sin permiso llegan como isError con el motivo, no como excepción", async () => {
+    const res = await call(login(), "add_player", { name: "Repetido", club: "Club", pos: "MF", age: 30, contractEnd: "2029-06-30" });
+    expect(res.result.isError).toBe(true);
+    expect(JSON.parse(res.result.content[0].text)).toMatchObject({ error: expect.stringContaining("Ya tienes"), status: 409 });
+  });
+
+  test("add_player rechaza por esquema una edad que no es entera", async () => {
+    writes.length = 0;
+    const res = await call(login(), "add_player", { name: "X", club: "Y", pos: "MF", age: 22.5, contractEnd: "2029-06-30" });
+    expect(res.error || res.result?.isError).toBeTruthy();
+    expect(writes).toEqual([]);
+  });
+
+  test("delete_player exige confirm: true; sin él no se borra nada", async () => {
+    writes.length = 0;
+    const token = login();
+    for (const args of [{ playerId: "saka" }, { playerId: "saka", confirm: false }]) {
+      const res = await call(token, "delete_player", args);
+      expect(res.error || res.result?.isError).toBeTruthy();
+    }
+    expect(writes).toEqual([]);
+    const ok = await call(token, "delete_player", { playerId: "saka", confirm: true });
+    expect(JSON.parse(ok.result.content[0].text).deleted).toEqual({ id: "saka", name: "Bukayo Saka", club: "Arsenal" });
+    expect(writes).toEqual([["remove", "u1", "saka"]]);
+  });
+
+  test("delete_player de un jugador inexistente o ajeno devuelve isError 404", async () => {
+    const res = await call(login(), "delete_player", { playerId: "nadie", confirm: true });
+    expect(res.result.isError).toBe(true);
+    expect(JSON.parse(res.result.content[0].text).status).toBe(404);
   });
 });

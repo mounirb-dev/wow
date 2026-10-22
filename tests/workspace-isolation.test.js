@@ -87,6 +87,7 @@ const { loadStaffDataByPlayer } = await import("../lib/staff-data.js");
 const { loadAllNews, loadPlayerNews, refreshNewsIfStale } = await import("../lib/news-sync.js");
 const { resolveWorkspaceContext } = await import("../lib/workspace.js");
 const players = await import("../app/api/players/[id]/route.js");
+const playersRoot = await import("../app/api/players/route.js");
 const staff = await import("../app/api/players/[id]/staff/route.js");
 const targets = await import("../app/api/transfer-targets/route.js");
 const members = await import("../app/api/workspace/members/route.js");
@@ -547,5 +548,75 @@ describe("club del workspace y subidas a Storage", () => {
     form.set("file", new File(["hola"], "informe.pdf", { type: "application/pdf" }));
     expect((await files.POST(new Request("https://app.test/api", { method: "POST", body: form }), params({ id: "fA" }))).status).toBe(201);
     expect(storageCalls.created).toEqual([expect.objectContaining({ name: "informe.pdf", isInputFile: true })]);
+  });
+});
+
+describe("alta y baja de jugadores", () => {
+  beforeEach(seed);
+  const newPlayer = { name: "Nuevo Jugador", club: "Club Nuevo", pos: "ST", age: 22, contractEnd: "2029-06-30" };
+  const created = async (body = newPlayer) => playersRoot.POST(json("POST", body));
+
+  test("un editor crea un jugador en SU workspace, con datos económicos vacíos", async () => {
+    const res = await created();
+    expect(res.status).toBe(201);
+    const { player } = await res.json();
+    expect(player).toMatchObject({ workspaceId: "wsA", name: "Nuevo Jugador", pos: "FW", age: 22, value: 0, salary: 0, fair: 0, dataStatus: "manual" });
+    expect((await loadPlayers()).map((item) => item.id)).toContain(player.$id);
+    as(users.ownerB);
+    expect((await loadPlayers()).map((item) => item.name)).not.toContain("Nuevo Jugador");
+  });
+
+  test("el viewer no puede crear y sin sesión es 401", async () => {
+    as(users.viewerA);
+    expect((await created()).status).toBe(403);
+    as(null);
+    expect((await created()).status).toBe(401);
+    expect(Object.keys(store.players)).toHaveLength(2);
+  });
+
+  test("datos inválidos son 400 y un duplicado (nombre + club) es 409", async () => {
+    expect((await created({ ...newPlayer, age: 5 })).status).toBe(400);
+    expect((await created()).status).toBe(201);
+    expect((await created({ ...newPlayer, name: "  nuevo JUGADOR " })).status).toBe(409);
+    // El mismo nombre y club en OTRO workspace no choca.
+    as(users.ownerB);
+    expect((await created()).status).toBe(201);
+  });
+
+  test("borrar elimina el jugador y TODO lo que cuelga de él, sin tocar otros workspaces", async () => {
+    store.suitors.sA2 = { $id: "sA2", playerId: "pA", club: "Otro", need: 10 };
+    const res = await players.DELETE(json("DELETE"), params({ id: "pA" }));
+    expect(res.status).toBe(200);
+    expect(store.players.pA).toBeUndefined();
+    for (const table of ["suitors", "news_items", "player_staff_signals", "transfer_targets"]) {
+      expect(Object.values(store[table]).filter((row) => row.playerId === "pA")).toEqual([]);
+      expect(Object.values(store[table]).filter((row) => row.playerId === "pB")).toHaveLength(1);
+    }
+    expect(store.players.pB).toBeDefined();
+    expect((await loadPlayers()).map((item) => item.id)).toEqual([]);
+  });
+
+  test("no se puede borrar un jugador de otro workspace ni uno inexistente (mismo 404)", async () => {
+    const foreign = await players.DELETE(json("DELETE"), params({ id: "pB" }));
+    const missing = await players.DELETE(json("DELETE"), params({ id: "nadie" }));
+    expect(foreign.status).toBe(404);
+    expect(missing.status).toBe(404);
+    expect(await foreign.json()).toEqual(await missing.json());
+    expect(store.players.pB).toBeDefined();
+    expect(store.news_items.nB).toBeDefined();
+  });
+
+  test("el viewer no puede borrar y no se pierde nada", async () => {
+    as(users.viewerA);
+    expect((await players.DELETE(json("DELETE"), params({ id: "pA" }))).status).toBe(403);
+    expect(store.players.pA).toBeDefined();
+    expect(store.suitors.sA).toBeDefined();
+  });
+
+  test("un jugador borrado no reaparece: ni en la lista, ni en la ficha, ni en las noticias", async () => {
+    await players.DELETE(json("DELETE"), params({ id: "pA" }));
+    expect(await loadPlayer("pA")).toBeNull();
+    expect(await loadAllNews()).toEqual([]);
+    expect(await loadPlayerNews("pA")).toEqual([]);
   });
 });
