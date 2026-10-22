@@ -6,6 +6,9 @@ import { UserPlus, Users, X } from "lucide-react";
 const JSON_HEADERS = { "content-type": "application/json" };
 const fieldClass = "rounded-md border bg-background px-3 py-2 text-sm";
 
+// Lo que se le cuenta a quien invita: si la persona recibió el email para crear su cuenta o hay que avisarla.
+const inviteMessage = ({ emailSent }) => (emailSent === true ? "Invitación enviada: le ha llegado un email para crear su cuenta" : emailSent === false ? "Añadido, pero no se pudo enviar el email: puede pedir su enlace en /onboarding" : "Miembro añadido");
+
 // Lista de miembros e invitaciones del workspace (/api/workspace/members). Invitar y cambiar
 // roles solo funciona para owner/admin; la API lo impone, la UI solo lo refleja.
 // Usa <dialog> nativo: el navegador gestiona el foco atrapado, Escape y el fondo.
@@ -46,7 +49,7 @@ export default function WorkspaceMembersPanel({ collapsed = false }) {
 
   function invite(event) {
     event.preventDefault();
-    mutate("/api/workspace/members", "POST", { email, role }, (payload) => { setMembers((current) => [...current, payload.member]); setEmail(""); setMessage("Miembro añadido"); }, "No se pudo añadir");
+    mutate("/api/workspace/members", "POST", { email, role }, (payload) => { setMembers((current) => [...current, payload.member]); setEmail(""); setMessage(inviteMessage(payload)); }, "No se pudo añadir");
   }
 
   function changeRole(id, nextRole) {

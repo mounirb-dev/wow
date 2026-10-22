@@ -92,7 +92,19 @@ class FakeUsers {
   }
 }
 
-mock.module("node-appwrite", () => ({ ...real, TablesDB: FakeTablesDB, Storage: FakeStorage, Users: FakeUsers }));
+// Emails de onboarding que pidió la app a Appwrite (Account.createMagicURLToken). Account se sustituye aquí
+// (y no se usa el real) porque otros archivos de test también lo sustituyen y bun comparte los mocks.
+let onboardingEmails = [];
+let failOnboardingEmail = false;
+class FakeAccount {
+  async createMagicURLToken(params) {
+    if (failOnboardingEmail) throw Object.assign(new Error("smtp no configurado"), { code: 500 });
+    onboardingEmails.push(params);
+    return { $id: "t1", userId: params.userId, secret: "" };
+  }
+}
+
+mock.module("node-appwrite", () => ({ ...real, TablesDB: FakeTablesDB, Storage: FakeStorage, Users: FakeUsers, Account: FakeAccount }));
 // bun comparte los mocks entre archivos de test (recovery-verify.test.js ya sustituye este módulo
 // con solo dos exports), así que se redefine completo en vez de importar el real.
 mock.module("../lib/appwrite.js", () => ({
@@ -184,6 +196,8 @@ function seed() {
   storageCalls.created.length = storageCalls.deleted.length = storageCalls.downloaded.length = storageCalls.previewed.length = 0;
   storedFiles = {};
   appwriteUsers = [];
+  onboardingEmails = [];
+  failOnboardingEmail = false;
   as(users.editorA);
 }
 
@@ -341,6 +355,18 @@ describe("aislamiento: escrituras y acceso por id", () => {
     expect(await invite("verificada@d.test")).toMatchObject({ status: "active", userId: "u-ver" });
     expect(await invite("sinverificar@d.test")).toMatchObject({ status: "invited", userId: expect.stringMatching(/^invite_/) });
     expect(await invite("nadie@d.test")).toMatchObject({ status: "invited" });
+    // Solo los invitados (que aún no pueden entrar) reciben el email para crear su cuenta, con el enlace a /onboarding.
+    expect(onboardingEmails.map((mail) => mail.email)).toEqual(["sinverificar@d.test", "nadie@d.test"]);
+    expect(onboardingEmails[0].url).toBe("https://app.test/onboarding");
+  });
+
+  test("miembros: si el email no sale la invitación se crea igualmente y se avisa", async () => {
+    store.workspace_members.mEditorA.role = "admin";
+    failOnboardingEmail = true;
+    const res = await members.POST(json("POST", { email: "nadie@d.test", role: "viewer" }));
+    expect(res.status).toBe(201);
+    expect(await res.json()).toMatchObject({ member: { status: "invited" }, emailSent: false });
+    expect(Object.values(store.workspace_members).find((row) => row.email === "nadie@d.test")).toMatchObject({ status: "invited" });
   });
 
   test("carpetas: no se puede crear dentro de una carpeta de otro workspace", async () => {
@@ -853,6 +879,18 @@ describe("alta de clubes por invitación", () => {
     const db = new FakeTablesDB();
     expect(await inviteClub({ db, DB: "agentsolver", email: "sinverificar@d.test", club: "Club X", findUser: find("sinverificar@d.test", false) })).toMatchObject({ status: "invited" });
     expect(Object.values(store.workspace_members).find((row) => row.email === "sinverificar@d.test")).toMatchObject({ status: "invited", userId: expect.stringMatching(/^invite_/) });
+  });
+
+  test("el alta de un club manda el email de onboarding al invitado; si no sale, la invitación queda igualmente", async () => {
+    const sent = [];
+    const base = { db: new FakeTablesDB(), DB: "agentsolver", club: "Club Mail", findUser: find(null) };
+    expect(await inviteClub({ ...base, email: "uno@d.test", sendInvite: async (email) => { sent.push(email); } })).toMatchObject({ status: "invited", emailSent: true });
+    expect(sent).toEqual(["uno@d.test"]);
+    expect(await inviteClub({ ...base, email: "dos@d.test", sendInvite: async () => { throw new Error("smtp"); } })).toMatchObject({ status: "invited", emailSent: false });
+    expect(Object.values(store.workspace_members).filter((row) => ["uno@d.test", "dos@d.test"].includes(row.email))).toHaveLength(2);
+    // Una cuenta verificada entra activa: no hace falta email.
+    expect(await inviteClub({ ...base, email: "tres@d.test", findUser: find("tres@d.test"), sendInvite: async (email) => { sent.push(email); } })).toMatchObject({ status: "active" });
+    expect(sent).toEqual(["uno@d.test"]);
   });
 
   test("un email que ya está en otro workspace no se vuelve a dar de alta", async () => {
