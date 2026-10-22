@@ -341,6 +341,40 @@ describe("aislamiento: escrituras y acceso por id", () => {
     expect(storageCalls.downloaded).toEqual(["binA"]);
   });
 
+  test("archivos: cambiar el nombre guarda el nombre limpio y no toca los bytes ni el tipo", async () => {
+    const res = await file.PATCH(json("PATCH", { name: "  Contrato/final.pdf  " }), params({ id: "fA", fileId: "dA" }));
+    expect(res.status).toBe(200);
+    const { file: renamed } = await res.json();
+    expect(renamed).toMatchObject({ $id: "dA", name: "Contrato_final.pdf", mimeType: "application/pdf" });
+    expect(renamed.storageFileId).toBeUndefined();
+    expect(store.documents.dA).toMatchObject({ name: "Contrato_final.pdf", storageFileId: "binA" });
+    expect(storageCalls.deleted).toEqual([]);
+    expect(storageCalls.created).toEqual([]);
+  });
+
+  test("archivos: un nombre vacío da 400 y no cambia nada", async () => {
+    for (const name of ["", "   ", undefined, null]) {
+      expect((await file.PATCH(json("PATCH", { name }), params({ id: "fA", fileId: "dA" }))).status).toBe(400);
+    }
+    expect(store.documents.dA.name).toBe("a.pdf");
+  });
+
+  test("archivos: un viewer no puede cambiar el nombre", async () => {
+    as(users.viewerA);
+    expect((await file.PATCH(json("PATCH", { name: "x.pdf" }), params({ id: "fA", fileId: "dA" }))).status).toBe(403);
+    expect(store.documents.dA.name).toBe("a.pdf");
+  });
+
+  test("archivos: cambiar el nombre de un documento ajeno, de otra carpeta o de una carpeta restringida da 404", async () => {
+    expect((await file.PATCH(json("PATCH", { name: "pisado.pdf" }), params({ id: "fB", fileId: "dB" }))).status).toBe(404);
+    // Truco: el documento de B colgando de una carpeta propia.
+    expect((await file.PATCH(json("PATCH", { name: "pisado.pdf" }), params({ id: "fA", fileId: "dB" }))).status).toBe(404);
+    expect((await file.PATCH(json("PATCH", { name: "pisado.pdf" }), params({ id: "fSecret", fileId: "dSecret" }))).status).toBe(404);
+    expect((await file.PATCH(json("PATCH", { name: "pisado.pdf" }), params({ id: "fA", fileId: "no-existe" }))).status).toBe(404);
+    expect(store.documents.dB.name).not.toBe("pisado.pdf");
+    expect(store.documents.dSecret.name).not.toBe("pisado.pdf");
+  });
+
   test("sin sesión todas las rutas responden 401", async () => {
     as(null);
     expect((await players.PATCH(json("PATCH", { staffNotes: "x" }), params({ id: "pA" }))).status).toBe(401);
@@ -349,6 +383,7 @@ describe("aislamiento: escrituras y acceso por id", () => {
     expect((await members.GET()).status).toBe(401);
     expect((await folders.GET()).status).toBe(401);
     expect((await file.GET(json("GET"), params({ id: "fA", fileId: "dA" }))).status).toBe(401);
+    expect((await file.PATCH(json("PATCH", { name: "x.pdf" }), params({ id: "fA", fileId: "dA" }))).status).toBe(401);
   });
 });
 

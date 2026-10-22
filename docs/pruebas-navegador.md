@@ -41,6 +41,8 @@ Cada punto se mira en la pantalla **y** en el servidor/Storage.
 2. **Visor** (`components/FileViewer.jsx`): abre en el archivo elegido y muestra «N de M»; las flechas, el teclado (← →) y la tira de miniaturas cambian de archivo; el zoom (botones, rueda y doble clic) acerca y restablece; el vídeo y el audio se **pausan al salir** de su diapositiva; solo la diapositiva activa es accesible (`inert` en las vecinas). La foto y el vídeo ocupan todo el alto disponible, sin recuadro ni bordes.
 3. **Archivo que no se puede mostrar** (un `.png` que en realidad es JSON): el visor enseña «No se puede mostrar la imagen…» con *Descargar archivo*, nunca el icono de imagen rota. En la carpeta, su miniatura cae al icono de documento.
 4. Miniaturas reales en la carpeta y en «Todos los archivos»: foto, fotograma del vídeo con insignia de *play* y tile de audio.
+4b. **Cambiar nombre** (clic derecho → *Cambiar nombre*, editor+): el campo aparece enfocado con la extensión sin seleccionar; Enter guarda («Nota de voz.wav»), Escape cancela y el nombre nuevo se ve en el visor y tras recargar. Un viewer no ve la opción.
+4c. **Audio**: el visor muestra el reproductor `voice-note` (onda, tiempo restante, velocidad); reproduce, y al pasar a otro archivo se pausa.
 5. El menú de una foto/vídeo/audio ofrece *Ver*; el de un `.zip` solo *Descargar* y *Eliminar*.
 6. `?inline=1` solo se sirve inline para foto/vídeo/audio, con `X-Content-Type-Options: nosniff` y `Content-Security-Policy: sandbox`. SVG, HTML y el resto, como adjunto.
 7. «Todos los archivos»: tamaño legible (`262 B`, `25,9 KB`, `6,3 MB`) y botones *Ver* / *Descargar* con nombre accesible.

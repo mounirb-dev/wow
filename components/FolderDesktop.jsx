@@ -24,7 +24,7 @@ export default function FolderDesktop({ folderId, name, canEdit, canCreateFolder
   const isRoot = folderId == null;
   const canUpload = canEdit && !isRoot;
   const { folders, createFolder, renameFolder, removeFolder, patchFolder } = useSubfolders({ parentId: folderId ?? null, initialFolders, refresh: () => router.refresh() });
-  const { files, loading, uploading, progress, upload, removeFile } = useFolderFiles(folderId);
+  const { files, loading, uploading, progress, upload, removeFile, renameFile } = useFolderFiles(folderId);
   const { dragging, dropProps } = useFileDrop(canUpload, upload);
   const [currentAccess, setCurrentAccess] = useState({ restricted: Boolean(current?.restricted), allowedUserIds: current?.allowedUserIds ?? [] });
   const [accessTarget, setAccessTarget] = useState(null);
@@ -59,6 +59,10 @@ export default function FolderDesktop({ folderId, name, canEdit, canCreateFolder
       setRenaming(null);
       const previous = id === folderId ? name : folders.find((folder) => folder.$id === id)?.name;
       if (label.trim() !== previous) await renameFolder(id, label);
+    },
+    async finishRenameFile(file, label) {
+      setRenaming(null);
+      await renameFile(file, label);
     },
   };
 

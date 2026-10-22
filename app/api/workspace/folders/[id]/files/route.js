@@ -4,13 +4,11 @@
 import { NextResponse } from "next/server";
 import { ID, Query } from "node-appwrite";
 import { DB } from "@/lib/appwrite.js";
-import { publicFile } from "@/lib/document-files.js";
+import { cleanFileName, publicFile } from "@/lib/document-files.js";
 import { PART_SIZE, maxUploadBytes, partCount } from "@/lib/upload-limits.js";
 import { signUpload } from "@/lib/upload-token.js";
 import { canEdit, findFolder, getWorkspaceContext } from "@/lib/workspace.js";
 
-// Nombre de archivo seguro: sin separadores de ruta ni caracteres de control, <= 255.
-const cleanName = (value) => String(value ?? "").toWellFormed().replace(/[\\/\u0000-\u001f]/g, "_").trim().slice(0, 255);
 // Tipo MIME declarado por el navegador; si no tiene forma de tipo, octet-stream. Solo es una pista.
 const cleanType = (value) => (/^[\w.+-]+\/[\w.+-]+$/.test(String(value ?? "")) ? String(value).slice(0, 127) : "application/octet-stream");
 
@@ -37,7 +35,7 @@ export async function POST(request, { params }) {
   if (!(await findFolder(context, folderId))) return NextResponse.json({ error: "Carpeta no encontrada" }, { status: 404 });
 
   const body = await request.json().catch(() => ({}));
-  const name = cleanName(body.name);
+  const name = cleanFileName(body.name);
   const size = Number(body.size);
   if (!name) return NextResponse.json({ error: "Falta el nombre del archivo" }, { status: 400 });
   if (!Number.isInteger(size) || size < 1) return NextResponse.json({ error: "El archivo está vacío o su tamaño no es válido" }, { status: 400 });

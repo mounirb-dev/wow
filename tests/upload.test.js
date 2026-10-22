@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, describe, expect, test } from "bun:test";
-import { binaryIds, parseRange, publicFile, streamParts } from "../lib/document-files.js";
+import { binaryIds, cleanFileName, parseRange, publicFile, streamParts } from "../lib/document-files.js";
 import { formatSize, formatTime, inlineMime, previewKind, viewableFiles } from "../lib/files.js";
 import { DEFAULT_MAX_UPLOAD_MB, PART_SIZE, maxUploadBytes, partCount, partId, partLength } from "../lib/upload-limits.js";
 import { signUpload, verifyUpload } from "../lib/upload-token.js";
@@ -40,6 +40,19 @@ describe("binaryIds y publicFile", () => {
   test("lo que sale al cliente no incluye los ids internos de Storage", () => {
     const file = publicFile("f1", { $id: "d1", name: "a.mp4", size: 5, partIds: ["p"], storageFileId: "p" });
     expect(file).toEqual({ $id: "d1", name: "a.mp4", size: 5, downloadUrl: "/api/workspace/folders/f1/files/d1" });
+  });
+});
+
+describe("cleanFileName", () => {
+  test("quita separadores de ruta y caracteres de control, y recorta espacios", () => {
+    expect(cleanFileName("  ../etc/passwd  ")).toBe(".._etc_passwd");
+    expect(cleanFileName("a\\b\u0000c\n.png")).toBe("a_b_c_.png");
+  });
+  test("vacío si no hay nada utilizable y con tope de 255", () => {
+    expect(cleanFileName("")).toBe("");
+    expect(cleanFileName("   ")).toBe("");
+    expect(cleanFileName(null)).toBe("");
+    expect(cleanFileName("x".repeat(400))).toHaveLength(255);
   });
 });
 

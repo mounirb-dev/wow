@@ -8,7 +8,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { downloadPath, formatDate, formatSize, previewKind, viewPath, viewableFiles } from "@/lib/files.js";
-import AudioPlayer from "./media/AudioPlayer.jsx";
+import AudioSlide from "./media/AudioSlide.jsx";
 import BrokenMedia from "./media/BrokenMedia.jsx";
 import ImageSlide from "./media/ImageSlide.jsx";
 import MediaThumb from "./media/MediaThumb.jsx";
@@ -24,7 +24,7 @@ function Slide({ file, active, onZoomChange }) {
   const src = viewPath(file);
   if (kind === "image") return <ImageSlide src={src} name={file.name} onError={fail} onZoomChange={active ? onZoomChange : undefined} />;
   if (kind === "video") return <div className="grid size-full place-items-center"><div className="w-full"><VideoPlayer src={src} name={file.name} active={active} onError={fail} /></div></div>;
-  return <div className="grid size-full place-items-center p-6"><div className="w-full max-w-xl"><AudioPlayer src={src} name={file.name} active={active} onError={fail} /></div></div>;
+  return <div className="grid size-full place-items-center p-6"><div className="w-full max-w-xl"><AudioSlide src={src} name={file.name} active={active} onError={fail} /></div></div>;
 }
 
 // Tira de miniaturas para saltar a cualquier archivo de la carpeta.
@@ -37,7 +37,7 @@ function ThumbStrip({ files, current, onSelect }) {
           onClick={() => onSelect(index)}
           aria-label={`Ver ${file.name}`}
           aria-current={index === current ? "true" : undefined}
-          className={`block rounded-md outline-none ring-offset-background transition focus-visible:ring-2 focus-visible:ring-ring ${index === current ? "ring-2 ring-primary" : "opacity-70 hover:opacity-100"}`}
+          className={`block rounded-md outline-none ring-offset-background transition focus-visible:ring-2 focus-visible:ring-ring ${index === current ? "ring-2 ring-white" : "opacity-60 hover:opacity-100"}`}
         >
           <MediaThumb file={file} size="strip" />
         </button>
@@ -64,13 +64,13 @@ function ViewerBody({ files, startIndex }) {
   return <>
     <div className="flex items-start justify-between gap-3 pr-8">
       <DialogHeader className="min-w-0 pr-0">
-        <DialogTitle className="truncate">{active.name}</DialogTitle>
-        <DialogDescription className="flex items-center gap-2">{details}{many && <Badge variant="secondary">{current + 1} de {files.length}</Badge>}</DialogDescription>
+        <DialogTitle className="truncate text-white">{active.name}</DialogTitle>
+        <DialogDescription className="flex items-center gap-2 text-white/70">{details}{many && <Badge variant="secondary">{current + 1} de {files.length}</Badge>}</DialogDescription>
       </DialogHeader>
-      <Button asChild variant="outline" size="sm" className="shrink-0"><a href={downloadPath(active)}><Download aria-hidden="true" /> Descargar</a></Button>
+      <Button asChild variant="secondary" size="sm" className="shrink-0"><a href={downloadPath(active)}><Download aria-hidden="true" /> Descargar</a></Button>
     </div>
     {/* Mientras se está acercando una foto se desactiva el deslizamiento: arrastrar mueve la foto, no cambia de archivo. */}
-    <Carousel ref={carousel} opts={{ startIndex, watchDrag: !zoomed }} onIndexChange={select} className="h-[calc(100dvh-15rem)] min-h-64 overflow-hidden">
+    <Carousel ref={carousel} opts={{ startIndex, watchDrag: !zoomed }} onIndexChange={select} className="h-[calc(100dvh-13rem)] min-h-64 overflow-hidden">
       <CarouselContent>
         {/* Las vecinas se precargan para que el deslizamiento sea fluido, pero no son alcanzables con teclado ni lector de pantalla. */}
         {files.map((file, index) => <CarouselItem key={file.$id} inert={index !== current}>
@@ -91,7 +91,11 @@ export default function FileViewer({ file, files = [], onClose }) {
   const startIndex = file ? Math.max(0, viewable.findIndex((item) => item.$id === file.$id)) : 0;
 
   return <Dialog open={viewable.length > 0} onOpenChange={(next) => { if (!next) onClose(); }}>
-    <DialogContent className="sm:max-w-6xl">
+    {/* Sin tarjeta: el contenido flota sobre un fondo oscurecido y desenfocado, y el texto va en blanco. */}
+    <DialogContent
+      overlayClassName="bg-black/75 supports-backdrop-filter:backdrop-blur-md"
+      className="max-w-3xl gap-3 border-0 bg-transparent p-0 text-white shadow-none ring-0 sm:max-w-3xl"
+    >
       {viewable.length > 0 && <ViewerBody key={file.$id} files={viewable} startIndex={startIndex} />}
     </DialogContent>
   </Dialog>;

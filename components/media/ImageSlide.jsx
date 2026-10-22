@@ -38,7 +38,7 @@ export default function ImageSlide({ src, name, onError, onZoomChange }) {
           draggable={false}
           onLoad={() => setLoaded(true)}
           onError={onError}
-          className={`size-full object-contain transition-opacity ${loaded ? "opacity-100" : "opacity-0"}`}
+          className={`size-full rounded-lg object-contain drop-shadow-2xl transition-opacity ${loaded ? "opacity-100" : "opacity-0"}`}
         />
       </TransformComponent>
     </TransformWrapper>

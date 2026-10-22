@@ -14,12 +14,18 @@ const select = (event, onSelect) => { event.stopPropagation(); onSelect(); };
 
 // Campo de nombre en línea (como al renombrar en el Finder): Enter o salir del campo confirma,
 // Escape cancela. `onDone("")` equivale a cancelar.
-export function RenameInput({ initial, onDone, align = "center" }) {
+// `keepExtension`: en un archivo solo se selecciona el nombre sin la extensión (como en el Finder), para
+// que escribir encima no la borre por accidente.
+export function RenameInput({ initial, onDone, align = "center", keepExtension = false }) {
   const input = useRef(null);
   const finished = useRef(false);
   const finish = (value) => { if (finished.current) return; finished.current = true; onDone(value); };
   // El campo aparece porque el usuario pidió renombrar/crear: se enfoca y se selecciona el nombre.
-  useEffect(() => { input.current?.focus(); input.current?.select(); }, []);
+  useEffect(() => {
+    input.current?.focus();
+    const dot = initial.lastIndexOf(".");
+    if (keepExtension && dot > 0) input.current?.setSelectionRange(0, dot); else input.current?.select();
+  }, [initial, keepExtension]);
   return <input
     ref={input}
     defaultValue={initial}
@@ -60,21 +66,25 @@ export function FolderItem({ folder, list, selected, renaming, canEdit, canConfi
 }
 
 // Archivo del escritorio: doble clic/Enter lo abre (foto, vídeo y audio se ven en una vista previa; el
-// resto se descarga); el menú permite ver, descargar y (editor+) eliminar.
-export function FileItem({ file, list, selected, canEdit, onSelect, onPreview, onDownload, onRemove }) {
+// resto se descarga); el menú permite ver, descargar y (editor+) cambiar el nombre y eliminar.
+export function FileItem({ file, list, selected, renaming, canEdit, onSelect, onPreview, onDownload, onStartRename, onRename, onRemove }) {
+  const row = useRef(null);
   const previewable = previewKind(file) !== null;
   const open = previewable ? onPreview : onDownload;
+  const rename = <RenameInput initial={file.name} onDone={onRename} align={list ? "left" : "center"} keepExtension />;
   return <ContextMenu>
     <ContextMenuTrigger asChild>
-      <button type="button" onClick={(event) => select(event, onSelect)} onDoubleClick={open} onKeyDown={(event) => { if (event.key === "Enter") open(); }} className={`${itemClass(selected)} ${list ? rowClass : ""}`} aria-label={`Archivo ${file.name}`}>
+      <button ref={row} type="button" onClick={(event) => select(event, onSelect)} onDoubleClick={open} onKeyDown={(event) => { if (event.key === "Enter") open(); }} className={`${itemClass(selected)} ${list ? rowClass : ""}`} aria-label={`Archivo ${file.name}`}>
         {list
-          ? <><MediaThumb file={file} size="list" /><span className="min-w-0 flex-1 truncate text-left text-sm">{file.name}</span><span className="hidden w-40 text-left text-xs text-muted-foreground sm:block">{kindLabel(file.name)}</span><span className="hidden w-20 text-left text-xs text-muted-foreground sm:block">{formatSize(file.size)}</span><span className="hidden w-28 text-left text-xs text-muted-foreground md:block">{formatDate(file.$createdAt)}</span></>
-          : <><MediaThumb file={file} size="grid" /><span className={labelClass(selected)}>{file.name}</span></>}
+          ? <><MediaThumb file={file} size="list" />{renaming ? rename : <span className="min-w-0 flex-1 truncate text-left text-sm">{file.name}</span>}<span className="hidden w-40 text-left text-xs text-muted-foreground sm:block">{kindLabel(file.name)}</span><span className="hidden w-20 text-left text-xs text-muted-foreground sm:block">{formatSize(file.size)}</span><span className="hidden w-28 text-left text-xs text-muted-foreground md:block">{formatDate(file.$createdAt)}</span></>
+          : <><MediaThumb file={file} size="grid" />{renaming ? rename : <span className={labelClass(selected)}>{file.name}</span>}</>}
       </button>
     </ContextMenuTrigger>
-    <ContextMenuContent>
+    {/* Al cerrarse el menú Radix devuelve el foco al archivo; si se está renombrando, el foco va al campo. */}
+    <ContextMenuContent onCloseAutoFocus={(event) => { if (renaming) { event.preventDefault(); row.current?.querySelector("input")?.focus(); } }}>
       {previewable && <ContextMenuItem onSelect={onPreview}><Eye />Ver</ContextMenuItem>}
       <ContextMenuItem onSelect={onDownload}><Download />Descargar</ContextMenuItem>
+      {canEdit && <ContextMenuItem onSelect={onStartRename}><Pencil />Cambiar nombre</ContextMenuItem>}
       {canEdit && <><ContextMenuSeparator /><ContextMenuItem variant="destructive" onSelect={onRemove}><Trash2 />Eliminar</ContextMenuItem></>}
     </ContextMenuContent>
   </ContextMenu>;

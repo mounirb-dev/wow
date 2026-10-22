@@ -1,11 +1,11 @@
-// GET descarga o muestra un archivo / DELETE lo borra. Comprueba que pertenece al workspace Y a esa
+// GET descarga o muestra un archivo / PATCH le cambia el nombre / DELETE lo borra. Comprueba que pertenece al workspace Y a esa
 // carpeta antes de tocar el almacenamiento.
 // GET admite Range (para adelantar un vídeo sin bajarlo entero) y ?inline=1 para mostrar fotos,
 // vídeos y audio dentro de la página; todo lo demás se sirve siempre como descarga.
 import { NextResponse } from "next/server";
 import { DB } from "@/lib/appwrite.js";
 import { mapLimit } from "@/lib/async.js";
-import { binaryIds, parseRange, streamParts } from "@/lib/document-files.js";
+import { binaryIds, cleanFileName, parseRange, publicFile, streamParts } from "@/lib/document-files.js";
 import { inlineMime } from "@/lib/files.js";
 import { deleteFile, downloadFile } from "@/lib/storage.js";
 import { canEdit, findFolder, getWorkspaceContext } from "@/lib/workspace.js";
@@ -52,6 +52,23 @@ export async function GET(request, { params }) {
     status: range ? 206 : 200,
     headers: { ...headers, "Content-Length": String(end - start + 1), ...(range && { "Content-Range": `bytes ${start}-${end}/${size}` }) },
   });
+}
+
+// Cambia el nombre. Solo toca la fila: los bytes y el tipo guardado no cambian, así que el archivo se sigue
+// mostrando igual aunque se le cambie o quite la extensión.
+export async function PATCH(request, { params }) {
+  const context = await getWorkspaceContext();
+  if (!context) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  if (!canEdit(context.member)) return NextResponse.json({ error: "Tu rol solo permite consultar" }, { status: 403 });
+  const { id: folderId, fileId } = await params;
+  const document = await getDocument(context, folderId, fileId);
+  if (!document) return NextResponse.json({ error: "Archivo no encontrado" }, { status: 404 });
+
+  const body = await request.json().catch(() => ({}));
+  const name = cleanFileName(body.name);
+  if (!name) return NextResponse.json({ error: "El nombre no puede estar vacío" }, { status: 400 });
+  const updated = await context.db.updateRow(DB, "documents", fileId, { name });
+  return NextResponse.json({ file: publicFile(folderId, updated) });
 }
 
 export async function DELETE(request, { params }) {
