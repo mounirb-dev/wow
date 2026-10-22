@@ -51,7 +51,7 @@ La consola de Appwrite está en <http://localhost:8080> (`admin@agentsolver.loca
 
 1. En [Google Cloud Console](https://console.cloud.google.com/apis/credentials) crea un *ID de cliente de OAuth* de tipo **Aplicación web**.
 2. Añade como **URI de redireccionamiento autorizado**:
-   `http://localhost:8080/v1/account/sessions/oauth2/callback/google/agentsolver`
+   `http://localhost:8080/v1/account/sessions/oauth2/callback/google/<ID_DEL_PROYECTO>` (el ID de `APPWRITE_PROJECT_ID`; `bun run appwrite:configure` imprime la URL exacta)
 3. Copia el ID y el secreto a `.env.local` (plantilla en `.env.example`):
    ```
    GOOGLE_CLIENT_ID=...

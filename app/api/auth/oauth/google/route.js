@@ -23,8 +23,14 @@ export async function GET(req) {
     response.cookies.set("as_oauth_next", next, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 600 });
     return response;
   } catch (e) {
-    // Appwrite answers 412 when the provider has no credentials yet; the SDK surfaces it as a vague message.
-    console.error("oauth start failed:", e.message);
-    return NextResponse.redirect(`${appUrl}/login?error=${encodeURIComponent("Google no está configurado todavía en Appwrite.")}`);
+    // Appwrite answers 412 when Google is disabled or has no credentials in the project, and 400 when the
+    // redirect host is not a registered platform; the SDK surfaces both as the same vague "Invalid redirect".
+    console.error("oauth start failed:", e.code, e.message);
+    const msg = e.code === 412
+      ? "Google no está activado en este proyecto de Appwrite: activa Google en Auth → Ajustes con su ID de cliente y secreto."
+      : e.code === 400
+        ? `Appwrite no acepta ${appUrl} como plataforma: añádela en Resumen → Plataformas (ejecuta bun run appwrite:configure).`
+        : "No se pudo iniciar el login con Google.";
+    return NextResponse.redirect(`${appUrl}/login?error=${encodeURIComponent(msg)}`);
   }
 }
