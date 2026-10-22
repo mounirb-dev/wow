@@ -6,7 +6,7 @@
 //   VERIFY_ONLY=test,build bun run verify   # subconjunto, para iterar (NO sirve para subir)
 //   VERIFY_SKIP=snyk bun run verify # omitir un paso, SOLO en local y con motivo (la CI lo ignora)
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -16,8 +16,10 @@ const inCI = Boolean(process.env.CI);
 const only = new Set((process.env.VERIFY_ONLY ?? "").split(",").filter(Boolean));
 const skip = new Set(inCI ? [] : (process.env.VERIFY_SKIP ?? "").split(",").filter(Boolean));
 
-// La build solo necesita que existan estas variables, no que sean reales.
-const buildEnv = { APPWRITE_ENDPOINT: "https://example.invalid/v1", APPWRITE_PROJECT_ID: "ci", APPWRITE_API_KEY: "ci", ...process.env };
+// La build solo necesita que existan estas variables, no que sean reales. Compila en `.next-verify`: con la
+// misma carpeta que `next dev` (.next), cada verify le borraba los archivos al servidor de desarrollo abierto
+// y la página mostraba "Algo ha fallado".
+const buildEnv = { APPWRITE_ENDPOINT: "https://example.invalid/v1", APPWRITE_PROJECT_ID: "ci", APPWRITE_API_KEY: "ci", ...process.env, NEXT_DIST_DIR: ".next-verify" };
 
 // En Windows `npx` es npx.cmd: spawnSync sin shell falla con ENOENT (y el paso se marcaba FALLO
 // sin ningún mensaje). Solo en ese caso se usa shell, entrecomillando los argumentos con espacios.
@@ -34,7 +36,15 @@ const steps = [
   // Next se lanza con node y su binario local, no con `npx next`: el shim .bin/next.exe que deja bun
   // hace que la build cargue otro Next/React desde un node_modules de una carpeta superior y el
   // prerender de /_global-error falla con "useContext de null".
-  ["build", "next build compila sin errores", () => run(process.execPath, [join(process.cwd(), "node_modules", "next", "dist", "bin", "next"), "build"], buildEnv)],
+  ["build", "next build compila sin errores", () => {
+    try {
+      return run(process.execPath, [join(process.cwd(), "node_modules", "next", "dist", "bin", "next"), "build"], buildEnv);
+    } finally {
+      // Solo hacía falta para comprobar que compila. Se borra: React Doctor analiza el código compilado que
+      // encuentre (solo ignora `.next`) y lo puntuaría como si fuera nuestro.
+      rmSync(buildEnv.NEXT_DIST_DIR, { recursive: true, force: true });
+    }
+  }],
   ["audit", "bun audit: ninguna vulnerabilidad conocida en dependencias", () => run("bun", ["audit"])],
   ["snyk", "Snyk: dependencias (SCA) y código (SAST)", () => {
     if (!process.env.SNYK_TOKEN) {

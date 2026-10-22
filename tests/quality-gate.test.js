@@ -50,5 +50,6 @@ describe("scripts/verify.mjs", () => {
     expect(result.stdout + result.stderr).not.toContain("OMITIDO");
     expect(result.stdout + result.stderr).toContain("Falta SNYK_TOKEN");
   });
-  test("una ejecución parcial nunca devuelve éxito", () => expect(run("scripts/verify.mjs", [], { env: { VERIFY_ONLY: "lockfile" } }).status).toBe(1));
+  // Ejecuta `bun install --frozen-lockfile` de verdad (red/disco): con el límite por defecto de 5 s fallaba a veces.
+  test("una ejecución parcial nunca devuelve éxito", () => expect(run("scripts/verify.mjs", [], { env: { VERIFY_ONLY: "lockfile" } }).status).toBe(1), 60000);
 });

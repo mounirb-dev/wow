@@ -65,9 +65,23 @@ class FakeStorage {
     return { $id: id, sizeOriginal: storedFiles[id].length };
   }
   async deleteFile(_bucket, id) { storageCalls.deleted.push(id); delete storedFiles[id]; }
-  async getFileDownload(_bucket, id) { storageCalls.downloaded.push(id); return storedFiles[id] ?? Buffer.from("contenido"); }
   async getFilePreview(_bucket, id) { storageCalls.previewed.push(id); return Buffer.from("png"); }
 }
+
+// Descargas de Storage: lib/storage.js lee los bytes por HTTP. El servidor falso imita a Appwrite, que
+// responde con Content-Type application/json si el contenido parece JSON (y el SDK lo interpretaría).
+const looksLikeJson = (bytes) => { try { JSON.parse(Buffer.from(bytes).toString("utf8")); return true; } catch { return false; } };
+const downloadPattern = /\/storage\/buckets\/[^/]+\/files\/([^/]+)\/download$/;
+const fetchBeforeStorageStub = globalThis.fetch;
+globalThis.fetch = async (url, init) => {
+  const match = downloadPattern.exec(String(url));
+  if (!match) return fetchBeforeStorageStub(url, init);
+  const id = decodeURIComponent(match[1]);
+  storageCalls.downloaded.push(id);
+  // Binarios anteriores sembrados en el test (binA…): su contenido es "contenido".
+  const bytes = storedFiles[id] ?? Buffer.from("contenido");
+  return new Response(bytes, { headers: { "content-type": looksLikeJson(bytes) ? "application/json" : "application/octet-stream" } });
+};
 
 mock.module("node-appwrite", () => ({ ...real, TablesDB: FakeTablesDB, Storage: FakeStorage }));
 // bun comparte los mocks entre archivos de test (recovery-verify.test.js ya sustituye este módulo
@@ -1190,5 +1204,44 @@ describe("archivos antiguos (un solo binario): Range", () => {
     const res = await get("bytes=50-");
     expect(res.status).toBe(416);
     expect(res.headers.get("content-range")).toBe("bytes */9");
+  });
+});
+
+describe("descargas: archivos cuyo contenido parece JSON", () => {
+  beforeEach(seed);
+  const open = (body) => files.POST(json("POST", body), params({ id: "fA" }));
+  const put = (token, index, bytes) => upload.PUT(new Request(`https://app.test/api?part=${index}`, { method: "PUT", headers: { "x-upload-token": token }, body: bytes }), params({ id: "fA" }));
+  const finish = (token) => upload.POST(new Request("https://app.test/api", { method: "POST", headers: { "x-upload-token": token } }), params({ id: "fA" }));
+  const get = (fileId, init = {}) => file.GET(new Request("https://app.test/api", init), params({ id: "fA", fileId }));
+
+  // Regresión: Appwrite sirve un archivo con contenido JSON como application/json y el SDK lo convertía en
+  // un objeto, así que la descarga fallaba con 500. Ahora se leen siempre bytes.
+  test("un archivo .json o un descriptor con forma de JSON se descarga igual de bytes, no como objeto", async () => {
+    const content = Buffer.from(JSON.stringify({ id: "inbatt_1", filename: "inline-image-1.png", contentType: "image/png", size: 871 }));
+    const { token } = await (await open({ name: "inline-image-1.png", size: content.length, type: "image/png" })).json();
+    await put(token, 0, content);
+    const { file: doc } = await (await finish(token)).json();
+
+    const res = await get(doc.$id);
+    expect(res.status).toBe(200);
+    expect(Buffer.from(await res.arrayBuffer()).equals(content)).toBe(true);
+    const ranged = await get(doc.$id, { headers: { range: "bytes=0-9" } });
+    expect(ranged.status).toBe(206);
+    expect(Buffer.from(await ranged.arrayBuffer()).equals(content.subarray(0, 10))).toBe(true);
+  });
+
+  test("lo mismo con un archivo antiguo de un solo binario", async () => {
+    store.documents.dJson = { $id: "dJson", workspaceId: "wsA", folderId: "fA", name: "datos.json", mimeType: "application/json", storageFileId: "binJson" };
+    storedFiles.binJson = Buffer.from('{"a":1}');
+    const res = await get("dJson");
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe('{"a":1}');
+  });
+
+  test("si el binario ya no existe en Storage la descarga falla con el estado de Storage, no con un objeto raro", async () => {
+    store.documents.dGone = { $id: "dGone", workspaceId: "wsA", folderId: "fA", name: "x.bin", mimeType: "application/octet-stream", storageFileId: "binGone" };
+    const original = globalThis.fetch;
+    globalThis.fetch = async () => new Response("{}", { status: 404 });
+    try { await expect(get("dGone")).rejects.toMatchObject({ code: 404 }); } finally { globalThis.fetch = original; }
   });
 });

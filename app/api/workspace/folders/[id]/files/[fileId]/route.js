@@ -3,11 +3,11 @@
 // GET admite Range (para adelantar un vídeo sin bajarlo entero) y ?inline=1 para mostrar fotos,
 // vídeos y audio dentro de la página; todo lo demás se sirve siempre como descarga.
 import { NextResponse } from "next/server";
-import { BUCKET_ID, DB, adminStorage } from "@/lib/appwrite.js";
+import { DB } from "@/lib/appwrite.js";
 import { mapLimit } from "@/lib/async.js";
 import { binaryIds, parseRange, streamParts } from "@/lib/document-files.js";
 import { inlineMime } from "@/lib/files.js";
-import { deleteFile } from "@/lib/storage.js";
+import { deleteFile, downloadFile } from "@/lib/storage.js";
 import { canEdit, findFolder, getWorkspaceContext } from "@/lib/workspace.js";
 
 async function getDocument(context, folderId, fileId) {
@@ -21,8 +21,6 @@ async function getDocument(context, folderId, fileId) {
     throw error;
   }
 }
-
-const readFile = (id) => adminStorage().getFileDownload(BUCKET_ID, id);
 
 export async function GET(request, { params }) {
   const context = await getWorkspaceContext();
@@ -44,12 +42,12 @@ export async function GET(request, { params }) {
   };
 
   // Archivos anteriores a las subidas por partes: un único binario (<= 25 MB), leído entero.
-  const single = document.partIds?.length ? null : Buffer.from(await readFile(document.storageFileId));
+  const single = document.partIds?.length ? null : await downloadFile(document.storageFileId);
   const size = single ? single.length : document.size;
   const range = parseRange(request.headers.get("range"), size);
   if (range === "invalid") return new NextResponse(null, { status: 416, headers: { "Content-Range": `bytes */${size}` } });
   const { start, end } = range ?? { start: 0, end: size - 1 };
-  const body = single ? new Uint8Array(single.subarray(start, end + 1)) : streamParts(document, start, end, readFile);
+  const body = single ? new Uint8Array(single.subarray(start, end + 1)) : streamParts(document, start, end, downloadFile);
   return new NextResponse(body, {
     status: range ? 206 : 200,
     headers: { ...headers, "Content-Length": String(end - start + 1), ...(range && { "Content-Range": `bytes ${start}-${end}/${size}` }) },

@@ -24,6 +24,7 @@ Reglas:
 - Si un paso falla, **arregla la causa**. No bajes el listón: no desactives reglas, no silencies diagnósticos con comentarios, no borres tests, no uses `--no-verify`, no cambies la versión fijada de React Doctor para esquivar reglas.
 - Cada cambio de comportamiento lleva su test en `tests/`. Los bugs se arreglan con un test que los reproduce primero.
 - Itera con `VERIFY_ONLY=test,build bun run verify`, pero esa ejecución parcial **no vale para subir**.
+- Si el cambio toca la interfaz, la subida de archivos o el borrado de datos, **pruébalo en el navegador antes de subir**: sigue `docs/pruebas-navegador.md` con el navegador integrado (sin Playwright) y borra después lo que hayas creado.
 - `VERIFY_SKIP=<paso>` solo existe para un fallo de entorno ajeno al código (p. ej. no hay `SNYK_TOKEN` en una sesión local). Hay que escribirlo delante del comando a la vista, justificarlo en el mensaje del commit y decírselo al usuario. La CI lo ignora siempre.
 - Si no tienes `SNYK_TOKEN`, no lo inventes ni lo pidas por chat: avisa al usuario de que Snyk no se ha podido ejecutar.
 - Lee `docs/arquitectura.md` antes de tocar datos: toda consulta debe filtrar por workspace.
