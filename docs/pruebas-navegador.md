@@ -23,6 +23,10 @@ Guía para comprobar a mano, con el **navegador integrado de Claude**, lo que lo
 
 Cada punto se mira en la pantalla **y** en el servidor/Storage.
 
+### Acceso por invitación
+1. Una cuenta sin invitación que inicia sesión llega a `/acceso` («Todavía no tienes acceso») y no ve datos; `/api/workspace/files` responde 401. Se puede probar creando un usuario de prueba en el Appwrite local (borra después el usuario y las filas que cree el alta).
+2. `bun run club:invite -- email "Club"`: con el email SIN verificar sigue en `/acceso`; al verificarlo (o entrando con Google) aparece el workspace del club. Repetir el comando responde `exists`.
+
 ### Carpetas
 1. «Nueva carpeta» crea la carpeta y la deja seleccionada.
 2. Clic derecho sobre una carpeta: *Abrir, Cambiar nombre, Acceso…, Eliminar…*.

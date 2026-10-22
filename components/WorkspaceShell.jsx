@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import WorkspaceSidebar from "./WorkspaceSidebar.jsx";
 import { canManage, getWorkspaceContext } from "@/lib/workspace.js";
 
@@ -7,13 +8,15 @@ import { canManage, getWorkspaceContext } from "@/lib/workspace.js";
 // barra por props. El padding superior en móvil deja sitio a la barra fija.
 export default async function WorkspaceShell({ children }) {
   const context = await getWorkspaceContext();
+  // Sesión iniciada pero sin invitación (alta solo para clubes seleccionados): pantalla de acceso.
+  if (!context) redirect("/acceso");
   const workspace = {
-    name: context?.workspace.name ?? "AgentSolver",
-    iconUrl: context?.workspace.iconFileId ? `/api/workspace/icon?v=${context.workspace.iconFileId}` : null,
+    name: context.workspace.name,
+    iconUrl: context.workspace.iconFileId ? `/api/workspace/icon?v=${context.workspace.iconFileId}` : null,
   };
 
   return <div className="mx-auto flex max-w-[1440px] gap-5 px-4 pb-5 pt-[4.5rem] md:pt-5 transition-[gap,padding] duration-200 lg:px-6">
-    <WorkspaceSidebar workspace={workspace} canManage={Boolean(canManage(context?.member))} />
+    <WorkspaceSidebar workspace={workspace} canManage={Boolean(canManage(context.member))} />
     <div className="min-w-0 flex-1 transition-[opacity] duration-200">{children}</div>
   </div>;
 }

@@ -1,6 +1,6 @@
 // /api/workspace/members — GET lista miembros; POST invita por email (solo owner/admin).
-// Si el email ya tiene cuenta, entra activo; si no, queda como "invited" y se activa en su
-// primer acceso (ver getWorkspaceContext).
+// Si el email ya tiene una cuenta verificada, entra activo; si no, queda como "invited" y se activa en
+// su primer acceso con el email verificado (ver getWorkspaceContext).
 import { NextResponse } from "next/server";
 import { ID, Query, Users } from "node-appwrite";
 import { adminClient, DB } from "@/lib/appwrite.js";
@@ -27,7 +27,8 @@ export async function POST(request) {
   let name = email;
   try {
     const found = await new Users(adminClient()).list([Query.equal("email", email), Query.limit(1)]);
-    if (found.users[0]) { userId = found.users[0].$id; name = found.users[0].name || email; }
+    // Solo una cuenta con el email verificado entra activa: una sin verificar pudo crearla cualquiera con ese email.
+    if (found.users[0]?.emailVerification) { userId = found.users[0].$id; name = found.users[0].name || email; }
   } catch { /* La invitación pendiente también es válida para usuarios aún no registrados. */ }
   const member = await context.db.createRow(DB, "workspace_members", workspaceMemberId(context.workspace.$id, userId), { workspaceId: context.workspace.$id, userId, email, name, role: normalizeRole(body.role), status: userId.startsWith("invite_") ? "invited" : "active" });
   return NextResponse.json({ member }, { status: 201 });

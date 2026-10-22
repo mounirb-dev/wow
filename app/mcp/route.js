@@ -10,11 +10,19 @@ import { resolveWorkspaceContext } from "@/lib/workspace.js";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
+// Sin invitación no hay workspace (acceso solo para clubes seleccionados): la herramienta falla en vez de
+// leer o escribir datos de nadie.
+async function contextOf(user) {
+  const context = await resolveWorkspaceContext(user);
+  if (!context) throw new Error("Esta cuenta no tiene acceso a AgentSolver: hace falta una invitación.");
+  return context;
+}
+
 const handle = (request) => handleMcpRequest(request, {
   authenticate: (req) => userFromAuthorization(req.headers.get("authorization")),
-  loadPlayers: async (user) => loadPlayersFor(await resolveWorkspaceContext(user)),
-  addPlayer: async (user, input) => createPlayer(await resolveWorkspaceContext(user), input),
-  removePlayer: async (user, playerId) => deletePlayer(await resolveWorkspaceContext(user), playerId),
+  loadPlayers: async (user) => loadPlayersFor(await contextOf(user)),
+  addPlayer: async (user, input) => createPlayer(await contextOf(user), input),
+  removePlayer: async (user, playerId) => deletePlayer(await contextOf(user), playerId),
 });
 
 export { handle as GET, handle as POST, handle as DELETE };

@@ -63,6 +63,21 @@ Sin estas credenciales el botón de Google devuelve al login con un error.
 
 Appwrite valida Google y mantiene sus sesiones; AgentSolver solo guarda la sesión de Appwrite en una cookie HTTP-only.
 
+## Alta de clubes (solo por invitación)
+
+AgentSolver es para clubes seleccionados: iniciar sesión **no** crea ningún workspace. Quien entra sin invitación ve «Todavía no tienes acceso» (`/acceso`). El proceso:
+
+1. El club te pide acceso (email de su primer administrador + nombre del club).
+2. Lo das de alta con un comando (en producción, con las variables de producción cargadas):
+   ```bash
+   bun run club:invite -- persona@club.com "Nombre del club"
+   # producción: bun --env-file=<entorno de producción> scripts/invite-club.mjs persona@club.com "Nombre del club"
+   ```
+   Crea el workspace del club y deja invitado a esa persona como propietaria. Repetirlo no duplica nada.
+3. La persona entra con **Google** (o con una cuenta de email verificado) usando ese mismo email y ve su workspace. Desde ahí invita a su equipo desde «Compartir workspace».
+
+La invitación solo se activa con el email **verificado**: así nadie entra creando una cuenta con el email de otro. Para quitar el acceso a alguien, bórralo en «Compartir workspace». Variable opcional `ACCESS_CONTACT_EMAIL`: el email que se muestra en la pantalla de acceso para pedir invitación.
+
 ## Servidor MCP (remoto, con OAuth)
 
 El MCP es un endpoint HTTP en **`/mcp`** (Streamable HTTP, sin estado) protegido con OAuth 2.1 + PKCE. Cada usuario autoriza el acceso con su cuenta y solo ve los datos de su workspace. Herramientas de lectura: `list_clients`, `portfolio_summary`, `valuation`, `negotiation_brief` y, para el cuerpo técnico, `squad_alerts`, `squad_balance`, `lineup_suggestion`, `decision_matrix` y `player_report`. Herramientas de escritura (respetan el rol: un viewer no puede usarlas): `add_player` (nombre, club, posición, edad y fin de contrato; rechaza duplicados) y `delete_player` (borrado real en cascada; exige `confirm: true`).

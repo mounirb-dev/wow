@@ -22,6 +22,10 @@ Los datos pertenecen a un **workspace**. Appwrite se usa con la API key de admin
 
 Una consulta sin filtro de workspace es una fuga de datos entre clientes.
 
+### Alta de clubes: solo por invitación
+
+La herramienta es para clubes seleccionados, así que `resolveWorkspaceContext` **no crea workspaces**: devuelve `null` si el usuario no tiene membresía activa ni una invitación pendiente. Un `null` se ve como 401 en las rutas API, como `/acceso` en las páginas (`WorkspaceShell` redirige) y como error en `/mcp`. Un club nuevo se da de alta con `bun run club:invite` (`lib/club-invite.js`, `scripts/invite-club.mjs`): crea el workspace y deja invitado a su primer propietario. La invitación (ese flujo y la de «Compartir workspace») solo se activa si el email de la cuenta está **verificado** (`user.emailVerification`; Google llega verificado): sin esa comprobación, cualquiera podría registrarse en Appwrite con el email de un invitado y entrar. Por la misma razón, invitar a un email con cuenta sin verificar la deja como "invited" en vez de activa. Las membresías que ya existían no cambian. Tests en `tests/workspace-isolation.test.js` ("alta de clubes por invitación").
+
 ### Acceso por carpeta
 
 Dentro de un workspace, una carpeta puede ser `restricted` con una lista `allowedUserIds` (migración `014_folder_access`). Entran owner/admin, quien la creó y los usuarios listados; la restricción se hereda por las subcarpetas. La regla pura está en `lib/folder-access.js` y se aplica en `lib/workspace.js` (`listFolders`, `getFolder`, `findFolder`): **no leas carpetas ni documentos por id sin pasar por ellos**, y para saber si una carpeta existe aunque no se pueda ver usa `loadAllFolders`. Una carpeta sin acceso responde 404, igual que una inexistente. Las filas anteriores a la migración no tienen los campos y cuentan como abiertas. Tests en `tests/folder-access.test.js` y `tests/workspace-isolation.test.js`. Borrar una carpeta (clic derecho → Eliminar, editor+) elimina toda su rama con sus archivos y binarios; exige acceso a TODA la rama (si algo dentro está restringido para ti, responde 403).

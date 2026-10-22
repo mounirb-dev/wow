@@ -13,6 +13,7 @@
     "appwrite:configure": "bun --env-file=.env.local scripts/configure-appwrite.mjs",
     "appwrite:install": "bash scripts/appwrite-install.sh",
     "news:sync": "bun --env-file=.env.local scripts/sync-news.mjs",
+    "club:invite": "bun --env-file=.env.local scripts/invite-club.mjs",
     "test": "bun test",
     "verify": "node scripts/verify.mjs",
     "prepare": "git config core.hooksPath .githooks 2>/dev/null || true"

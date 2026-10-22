@@ -83,7 +83,16 @@ globalThis.fetch = async (url, init) => {
   return new Response(bytes, { headers: { "content-type": looksLikeJson(bytes) ? "application/json" : "application/octet-stream" } });
 };
 
-mock.module("node-appwrite", () => ({ ...real, TablesDB: FakeTablesDB, Storage: FakeStorage }));
+// Cuentas de Appwrite (Users.list por email) que conoce el test; vacío = nadie tiene cuenta todavía.
+let appwriteUsers = [];
+class FakeUsers {
+  async list(queries = []) {
+    const email = queries.map((query) => JSON.parse(String(query))).find((query) => query.method === "equal" && query.attribute === "email")?.values[0];
+    return { users: appwriteUsers.filter((user) => user.email === email) };
+  }
+}
+
+mock.module("node-appwrite", () => ({ ...real, TablesDB: FakeTablesDB, Storage: FakeStorage, Users: FakeUsers }));
 // bun comparte los mocks entre archivos de test (recovery-verify.test.js ya sustituye este módulo
 // con solo dos exports), así que se redefine completo en vez de importar el real.
 mock.module("../lib/appwrite.js", () => ({
@@ -109,6 +118,7 @@ mock.module("next/cache", () => ({ unstable_cache: (fn) => fn, revalidateTag: ()
 mock.module("../lib/session.js", () => ({ COOKIE: "as_session", cookieOptions: {}, getUser: async () => currentUser, requireUser: async () => currentUser }));
 
 const { loadPlayer, loadPlayers, loadPlayersFor } = await import("../lib/data.js");
+const { inviteClub } = await import("../lib/club-invite.js");
 const { loadPlayerStaffData, loadStaffDataByPlayer } = await import("../lib/staff-data.js");
 const { ownSignal, staffComments } = await import("../lib/staff-notes.js");
 const { loadAllNews, loadPlayerNews, refreshNewsIfStale } = await import("../lib/news-sync.js");
@@ -173,6 +183,7 @@ function seed() {
   };
   storageCalls.created.length = storageCalls.deleted.length = storageCalls.downloaded.length = storageCalls.previewed.length = 0;
   storedFiles = {};
+  appwriteUsers = [];
   as(users.editorA);
 }
 
@@ -213,12 +224,12 @@ describe("aislamiento: lecturas", () => {
     expect(await loadAllNews()).toEqual([]);
   });
 
-  test("un usuario sin membresía recibe un workspace propio y vacío, nunca uno existente", async () => {
+  test("un usuario sin membresía ni invitación no recibe ningún workspace (acceso solo por invitación)", async () => {
     as(users.stranger);
-    const context = await resolveWorkspaceContext(users.stranger);
-    expect(["wsA", "wsB"]).not.toContain(context.workspace.$id);
-    expect(context.member.role).toBe("owner");
-    expect(await loadPlayersFor(context)).toEqual([]);
+    const before = [Object.keys(store.workspaces).length, Object.keys(store.workspace_members).length];
+    expect(await resolveWorkspaceContext(users.stranger)).toBeNull();
+    expect(await loadPlayers()).toEqual([]);
+    expect([Object.keys(store.workspaces).length, Object.keys(store.workspace_members).length]).toEqual(before);
   });
 
   test("MCP: loadPlayersFor con el usuario de B solo ve a B", async () => {
@@ -321,6 +332,15 @@ describe("aislamiento: escrituras y acceso por id", () => {
   test("miembros: un admin sí puede cambiar un rol a viewer", async () => {
     store.workspace_members.mEditorA.role = "admin";
     expect((await member.PATCH(json("PATCH", { role: "viewer" }), params({ id: "mViewerA" }))).status).toBe(200);
+  });
+
+  test("miembros: invitar a un email con cuenta verificada lo activa; con cuenta sin verificar queda invitado", async () => {
+    store.workspace_members.mEditorA.role = "admin";
+    appwriteUsers = [{ $id: "u-ver", email: "verificada@d.test", name: "Ver", emailVerification: true }, { $id: "u-sin", email: "sinverificar@d.test", name: "Sin", emailVerification: false }];
+    const invite = async (email) => (await (await members.POST(json("POST", { email, role: "viewer" }))).json()).member;
+    expect(await invite("verificada@d.test")).toMatchObject({ status: "active", userId: "u-ver" });
+    expect(await invite("sinverificar@d.test")).toMatchObject({ status: "invited", userId: expect.stringMatching(/^invite_/) });
+    expect(await invite("nadie@d.test")).toMatchObject({ status: "invited" });
   });
 
   test("carpetas: no se puede crear dentro de una carpeta de otro workspace", async () => {
@@ -791,15 +811,58 @@ describe("borrar carpetas", () => {
   });
 });
 
-describe("cuenta nueva", () => {
+describe("alta de clubes por invitación", () => {
   beforeEach(seed);
-  test("se crea un workspace personal SIN carpetas ni jugadores de ejemplo", async () => {
-    const newcomer = { $id: "u-nuevo", email: "nuevo@d.test", name: "Nuevo" };
+  const find = (address, emailVerification = true) => async (email) => (email === address ? { $id: "u-existente", emailVerification } : null);
+
+  test("un club invitado entra con su email verificado y empieza SIN carpetas ni jugadores de ejemplo", async () => {
+    const db = new FakeTablesDB();
+    expect(await inviteClub({ db, DB: "agentsolver", email: " Nuevo@D.test ", club: "Club Nuevo", findUser: find(null) })).toMatchObject({ status: "invited" });
+    const newcomer = { $id: "u-nuevo", email: "nuevo@d.test", name: "Nuevo", emailVerification: true };
     const context = await resolveWorkspaceContext(newcomer);
-    expect(context.member.role).toBe("owner");
+    expect(context.workspace.name).toBe("Club Nuevo");
+    expect(context.member).toMatchObject({ role: "owner", status: "active", userId: "u-nuevo" });
     expect(await listFolders(context)).toEqual([]);
     expect(await loadPlayersFor(context)).toEqual([]);
     expect(Object.values(store.folders).filter((row) => row.workspaceId === context.workspace.$id)).toEqual([]);
+  });
+
+  test("con un email SIN verificar la invitación no se activa: nadie entra creando una cuenta con un email ajeno", async () => {
+    await inviteClub({ db: new FakeTablesDB(), DB: "agentsolver", email: "nuevo@d.test", club: "Club Nuevo", findUser: find(null) });
+    const impostor = { $id: "u-impostor", email: "nuevo@d.test", name: "Impostor", emailVerification: false };
+    expect(await resolveWorkspaceContext(impostor)).toBeNull();
+    expect(Object.values(store.workspace_members).find((row) => row.email === "nuevo@d.test")).toMatchObject({ status: "invited" });
+  });
+
+  test("una invitación a OTRO email no sirve", async () => {
+    await inviteClub({ db: new FakeTablesDB(), DB: "agentsolver", email: "nuevo@d.test", club: "Club Nuevo", findUser: find(null) });
+    expect(await resolveWorkspaceContext({ $id: "u-otro", email: "otro@d.test", name: "Otro", emailVerification: true })).toBeNull();
+  });
+
+  test("si el email ya tiene cuenta queda activo al momento; repetir el alta no duplica nada", async () => {
+    const db = new FakeTablesDB();
+    const args = { db, DB: "agentsolver", email: "ya@d.test", club: "Club Ya", findUser: find("ya@d.test") };
+    expect(await inviteClub(args)).toMatchObject({ status: "active" });
+    const rows = () => [Object.keys(store.workspaces).length, Object.keys(store.workspace_members).length];
+    const after = rows();
+    expect(await inviteClub(args)).toMatchObject({ status: "exists" });
+    expect(rows()).toEqual(after);
+  });
+
+  test("una cuenta existente SIN verificar no entra activa: queda invitada hasta que verifique", async () => {
+    const db = new FakeTablesDB();
+    expect(await inviteClub({ db, DB: "agentsolver", email: "sinverificar@d.test", club: "Club X", findUser: find("sinverificar@d.test", false) })).toMatchObject({ status: "invited" });
+    expect(Object.values(store.workspace_members).find((row) => row.email === "sinverificar@d.test")).toMatchObject({ status: "invited", userId: expect.stringMatching(/^invite_/) });
+  });
+
+  test("un email que ya está en otro workspace no se vuelve a dar de alta", async () => {
+    const before = Object.keys(store.workspaces).length;
+    expect(await inviteClub({ db: new FakeTablesDB(), DB: "agentsolver", email: "editor@a.test", club: "Otro", findUser: find(null) })).toMatchObject({ status: "exists", workspaceId: "wsA" });
+    expect(Object.keys(store.workspaces)).toHaveLength(before);
+  });
+
+  test.each([["no-es-email", "Club"], ["a@b.test", "   "], ["a@b.test", "x".repeat(161)]])("rechaza datos no válidos (%s, %s)", async (email, club) => {
+    await expect(inviteClub({ db: new FakeTablesDB(), DB: "agentsolver", email, club, findUser: find(null) })).rejects.toThrow();
   });
 });
 
