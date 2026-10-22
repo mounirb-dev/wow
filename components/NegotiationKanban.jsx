@@ -6,7 +6,8 @@ import { arrayMove } from "@dnd-kit/sortable";
 import { Circle, CircleCheck, CircleDot } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import KanbanColumn from "@/components/shadcn-space/blocks/kanban-application-01/kanban-column";
-import { ownSignal } from "@/lib/staff-notes.js";
+import { ownSignal, staffComments, teamSummary } from "@/lib/staff-notes.js";
+import StaffCommentsCard from "./StaffCommentsCard.jsx";
 import StaffInterestEditor from "./StaffInterestEditor.jsx";
 
 // Tablero de interés del staff: tres columnas (por revisar / me interesa / no interesa).
@@ -30,6 +31,16 @@ export default function NegotiationKanban({ players, staffData, userId, initialP
   const sourceColumn = useRef(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const selected = players.find((player) => player.id === selectedId);
+
+  // Valoraciones de los demás miembros (compartidas en el workspace). Solo lectura aquí: cada uno
+  // edita la suya en "Mi valoración".
+  const othersOf = (playerId) => (staffData[playerId]?.signals ?? []).filter((signal) => signal.userId !== userId);
+  // La tarjeta muestra además cómo está el equipo: las de los demás más la mía, la de ahora mismo.
+  const withTeam = (task) => {
+    const summary = teamSummary([...othersOf(task.id), signals[task.id]].filter(Boolean));
+    return summary ? { ...task, meta: `${task.meta} · ${summary}` } : task;
+  };
+  const shownColumns = columns.map((column) => ({ ...column, tasks: column.tasks.map(withTeam) }));
 
   const findColumn = (id, current = columns) => current.find((column) => column.id === id) || current.find((column) => column.tasks.some((task) => task.id === id));
 
@@ -93,13 +104,13 @@ export default function NegotiationKanban({ players, staffData, userId, initialP
     <Card className="w-full overflow-x-auto rounded-xl border bg-card p-4 ring-0 sm:p-6">
       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
         <div className="flex min-w-[760px] items-start gap-4">
-          {columns.map((column) => <KanbanColumn key={column.id} column={column} onSelect={setSelectedId} />)}
+          {shownColumns.map((column) => <KanbanColumn key={column.id} column={column} onSelect={setSelectedId} />)}
         </div>
         <DragOverlay dropAnimation={null}>
-          {activeTask ? <div className="w-72 rounded-xl border bg-card p-3 text-card-foreground shadow-xl"><p className="text-sm font-medium">{activeTask.content}</p><p className="mt-1 text-xs text-muted-foreground">{activeTask.meta}</p></div> : null}
+          {activeTask ? <div className="w-72 rounded-xl border bg-card p-3 text-card-foreground shadow-xl"><p className="text-sm font-medium">{activeTask.content}</p><p className="mt-1 text-xs text-muted-foreground">{withTeam(activeTask).meta}</p></div> : null}
         </DragOverlay>
       </DndContext>
     </Card>
-    {selected && <section className="mt-4 rounded-xl border bg-card p-4"><div className="mb-4 flex items-start justify-between gap-3"><div><p className="text-xs uppercase tracking-wider text-muted-foreground">Detalle de trabajo</p><h2 className="mt-1 text-base font-medium">{selected.name}</h2></div><button type="button" onClick={() => setSelectedId(null)} className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground">Cerrar</button></div><StaffInterestEditor player={selected} initialSignal={signals[selected.id]} initialTargets={staffData[selected.id]?.targets || []} onSignalSaved={(signal) => applySignal(selected.id, signal)} /></section>}
+    {selected && <section className="mt-4 rounded-xl border bg-card p-4"><div className="mb-4 flex items-start justify-between gap-3"><div><p className="text-xs uppercase tracking-wider text-muted-foreground">Detalle de trabajo</p><h2 className="mt-1 text-base font-medium">{selected.name}</h2></div><button type="button" onClick={() => setSelectedId(null)} className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground">Cerrar</button></div><StaffInterestEditor player={selected} initialSignal={signals[selected.id]} initialTargets={staffData[selected.id]?.targets || []} onSignalSaved={(signal) => applySignal(selected.id, signal)} /><div className="mt-3"><StaffCommentsCard playerId={selected.id} comments={{ opinions: staffComments({ signals: othersOf(selected.id) }).opinions, moves: [] }} title="Valoraciones del equipo" showLink={false} emptyText="Nadie más ha valorado a este jugador todavía." /></div></section>}
   </>;
 }

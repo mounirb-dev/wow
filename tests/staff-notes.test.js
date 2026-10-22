@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { INTEREST_LABEL, ownSignal, staffComments } from "../lib/staff-notes.js";
+import { INTEREST_LABEL, ownSignal, staffComments, teamSummary } from "../lib/staff-notes.js";
 
 const signal = (userId, patch = {}) => ({ $id: `s-${userId}`, userId, userName: `Usuario ${userId}`, interest: "interested", notes: `nota de ${userId}`, updatedAt: "2026-03-01T10:00:00.000Z", ...patch });
 
@@ -52,5 +52,21 @@ describe("staffComments", () => {
   test("lo que no tiene fecha va al final", () => {
     const { opinions } = staffComments({ signals: [signal("sin", { updatedAt: undefined }), signal("con")] });
     expect(opinions.map((item) => item.author)).toEqual(["Usuario con", "Usuario sin"]);
+  });
+});
+
+describe("teamSummary", () => {
+  const sig = (interest) => ({ interest });
+  test("cuenta a favor y en contra, y no cuenta 'por revisar'", () => {
+    expect(teamSummary([sig("interested"), sig("interested"), sig("not-interested"), sig("pending")])).toBe("Equipo: 2 a favor, 1 en contra");
+  });
+  test("solo muestra la parte que tiene votos", () => {
+    expect(teamSummary([sig("interested")])).toBe("Equipo: 1 a favor");
+    expect(teamSummary([sig("not-interested"), sig("not-interested")])).toBe("Equipo: 2 en contra");
+  });
+  test("sin votos, o sin datos, es cadena vacía", () => {
+    expect(teamSummary([sig("pending")])).toBe("");
+    expect(teamSummary([])).toBe("");
+    expect(teamSummary(undefined)).toBe("");
   });
 });
