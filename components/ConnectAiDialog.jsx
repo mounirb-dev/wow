@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
-import { Check, Copy, ExternalLink, Sparkles } from "lucide-react";
+import { Check, Copy, ExternalLink, Plug } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -56,7 +56,7 @@ export default function ConnectAiDialog({ collapsed = false }) {
 
   return <>
     <button type="button" onClick={() => setOpen(true)} title={collapsed ? "Conectar mi IA" : undefined} className={`flex h-8 w-full min-w-0 items-center gap-3 rounded-md text-left text-sm text-muted-foreground transition hover:bg-secondary hover:text-foreground ${collapsed ? "justify-center px-0" : "px-3"}`}>
-      <Sparkles className="size-4 shrink-0" aria-hidden="true" />
+      <Plug className="size-4 shrink-0" aria-hidden="true" />
       {collapsed ? <span className="sr-only">Conectar mi IA</span> : <span className="min-w-0 truncate">Conectar mi IA</span>}
     </button>
     <Dialog open={open} onOpenChange={setOpen}>
