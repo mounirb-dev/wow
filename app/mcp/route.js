@@ -4,6 +4,7 @@
 import { handleMcpRequest } from "@/lib/mcp-http.js";
 import { userFromAuthorization } from "@/lib/mcp-oauth.js";
 import { loadPlayersFor } from "@/lib/data.js";
+import { loadPlayerNewsFor } from "@/lib/news-sync.js";
 import { addSuitor, createPlayer, deletePlayer, removeSuitor, saveStaffSignal, updatePlayer } from "@/lib/player-store.js";
 import { resolveWorkspaceContext } from "@/lib/workspace.js";
 
@@ -21,6 +22,7 @@ async function contextOf(user) {
 const handle = (request) => handleMcpRequest(request, {
   authenticate: (req) => userFromAuthorization(req.headers.get("authorization")),
   loadPlayers: async (user) => loadPlayersFor(await contextOf(user)),
+  loadNews: async (user, playerId, limit) => loadPlayerNewsFor(await contextOf(user), playerId, limit),
   addPlayer: async (user, input) => createPlayer(await contextOf(user), input),
   removePlayer: async (user, playerId) => deletePlayer(await contextOf(user), playerId),
   updatePlayer: async (user, playerId, changes) => updatePlayer(await contextOf(user), playerId, changes),

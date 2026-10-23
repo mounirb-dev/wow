@@ -14,6 +14,7 @@ const opinions = [];
 const deps = {
   authenticate: (req) => userFromAuthorization(req.headers.get("authorization")),
   loadPlayers: async (user) => { calls.push(user.$id); return [player]; },
+  loadNews: async (_user, playerId, limit = 20) => playerId === "saka" ? [{ title: "Saka renueva", summary: "Acuerdo", sourceName: "Marca", publishedAt: "2026-10-22T10:00:00.000Z", url: "https://news.example/1", status: "pending-review", playerId: "saka" }].slice(0, limit) : null,
   addPlayer: async (user, input) => {
     writes.push(["add", user.$id, input]);
     if (input.name === "Repetido") throw playerError("Ya tienes un jugador con ese nombre y club", 409);
@@ -74,7 +75,7 @@ describe("endpoint /mcp", () => {
     const init = await (await handleMcpRequest(rpc(token, "initialize", { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "t", version: "1" } }), deps)).json();
     expect(init.result.serverInfo.name).toBe("wow");
     const list = await (await handleMcpRequest(rpc(token, "tools/list", {}, 2), deps)).json();
-    expect(list.result.tools.map((t) => t.name).sort()).toEqual(["add_player", "add_suitor", "decision_matrix", "delete_player", "lineup_suggestion", "list_clients", "negotiation_brief", "player_report", "portfolio_summary", "remove_suitor", "save_staff_opinion", "squad_alerts", "squad_balance", "update_player", "valuation"]);
+    expect(list.result.tools.map((t) => t.name).sort()).toEqual(["add_player", "add_suitor", "decision_matrix", "delete_player", "lineup_suggestion", "list_clients", "negotiation_brief", "player_news", "player_report", "portfolio_summary", "remove_suitor", "save_staff_opinion", "squad_alerts", "squad_balance", "update_player", "valuation"]);
     // Solo las herramientas de escritura dejan de ser de solo lectura; borrar y quitar clubes se marcan como destructivas.
     expect(list.result.tools.filter((t) => !t.annotations.readOnlyHint).map((t) => t.name).sort()).toEqual(["add_player", "add_suitor", "delete_player", "remove_suitor", "save_staff_opinion", "update_player"]);
     expect(list.result.tools.filter((t) => t.annotations.destructiveHint).map((t) => t.name).sort()).toEqual(["delete_player", "remove_suitor"]);
@@ -166,7 +167,7 @@ describe("endpoint /mcp", () => {
     expect(writes).toEqual([["remove", "u1", "saka"]]);
   });
 
-  const readOnlyNames = ["decision_matrix", "lineup_suggestion", "list_clients", "negotiation_brief", "player_report", "portfolio_summary", "squad_alerts", "squad_balance", "valuation"];
+  const readOnlyNames = ["decision_matrix", "lineup_suggestion", "list_clients", "negotiation_brief", "player_news", "player_report", "portfolio_summary", "squad_alerts", "squad_balance", "valuation"];
 
   test("con permiso de solo lectura no se ofrece NINGUNA herramienta de escritura y llamarlas falla", async () => {
     writes.length = 0;
@@ -236,4 +237,13 @@ describe("endpoint /mcp", () => {
     expect(res.result.isError).toBe(true);
     expect(JSON.parse(res.result.content[0].text).status).toBe(404);
   });
+});
+
+describe("herramienta player_news", () => {
+  const call = async (args) => (await handleMcpRequest(rpc(login(), "tools/call", { name: "player_news", arguments: args }, 60), deps)).json();
+  test("devuelve las noticias del jugador sin campos internos", async () => {
+    const result = JSON.parse((await call({ playerId: "saka" })).result.content[0].text);
+    expect(result).toEqual({ playerId: "saka", count: 1, news: [{ title: "Saka renueva", summary: "Acuerdo", source: "Marca", publishedAt: "2026-10-22T10:00:00.000Z", url: "https://news.example/1", status: "pending-review" }] });
+  });
+  test("un jugador que no es del workspace responde error", async () => expect((await call({ playerId: "nadie" })).result.isError).toBe(true));
 });
