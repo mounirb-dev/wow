@@ -116,7 +116,7 @@ export default function Terminal({ players, user }) {
                 <TabsTrigger value="vencen">Vencen pronto</TabsTrigger>
               </TabsList>
             </Tabs>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
               {visible.map((r) => (
                 <Card key={r.id} role="button" tabIndex={0} onClick={() => select(r.id)} onKeyDown={(e) => e.key === "Enter" && select(r.id)}
                   className={`cursor-pointer gap-3 border bg-card py-4 transition duration-200 hover:-translate-y-0.5 hover:bg-secondary hover:ring-primary/30 ${player.id === r.id ? "ring-2 ring-primary/70" : ""}`}>

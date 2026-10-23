@@ -15,7 +15,9 @@ export default async function WorkspaceShell({ children }) {
     iconUrl: context.workspace.iconFileId ? `/api/workspace/icon?v=${context.workspace.iconFileId}` : null,
   };
 
-  return <div className="mx-auto flex max-w-[1440px] gap-5 px-4 pb-5 pt-[4.5rem] md:pt-5 transition-[gap,padding] duration-200 lg:px-6">
+  // Ancho máximo alto (2200 px) para aprovechar monitores grandes; en pantallas normales ocupa todo el ancho
+  // y el margen lateral crece solo a partir de 2xl.
+  return <div className="mx-auto flex max-w-[2200px] gap-5 px-4 pb-5 pt-[4.5rem] md:pt-5 transition-[gap,padding] duration-200 lg:px-6 2xl:px-10">
     <WorkspaceSidebar workspace={workspace} canManage={Boolean(canManage(context.member))} email={context.user.email} emailVerified={Boolean(context.user.emailVerification)} />
     <div className="min-w-0 flex-1 transition-[opacity] duration-200">{children}</div>
   </div>;
