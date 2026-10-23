@@ -25,11 +25,14 @@ export default function AccountMenu({ collapsed = false, email, emailVerified = 
     setMessage("");
     try {
       const response = await fetch("/api/account/email", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ email: next, password }) });
+      if (!response.ok) {
+        const failure = await response.json().catch(() => ({}));
+        setMessage(failure.error || "No se pudo cambiar el email");
+        return;
+      }
       const payload = await response.json().catch(() => ({}));
-      if (response.ok) {
-        setCurrent(payload.email); setVerified(false); setNext(""); setPassword("");
-        setMessage(payload.verificationSent ? `Email cambiado. Te hemos enviado un enlace a ${payload.email}: ábrelo para confirmarlo` : "Email cambiado, pero no se pudo enviar el enlace de confirmación. Pídelo de nuevo abajo");
-      } else setMessage(payload.error || "No se pudo cambiar el email");
+      setCurrent(payload.email); setVerified(false); setNext(""); setPassword("");
+      setMessage(payload.verificationSent ? `Email cambiado. Te hemos enviado un enlace a ${payload.email}: ábrelo para confirmarlo` : "Email cambiado, pero no se pudo enviar el enlace de confirmación. Pídelo de nuevo abajo");
     } catch {
       setMessage("No se pudo cambiar el email");
     } finally {
