@@ -9,6 +9,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 export default function DeleteFolderDialog({ folder, onClose, onConfirm }) {
   const [deleting, setDeleting] = useState(false);
 
+  // Mientras se borra se bloquean los botones y el diálogo no se puede cerrar (ver onOpenChange), para
+  // que no haya dos borrados a la vez ni se cierre a medias.
   async function confirm() {
     setDeleting(true);
     try { await onConfirm(folder); } finally { setDeleting(false); }

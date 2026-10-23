@@ -23,6 +23,9 @@ function ContactRow({ icon: Icon, value, href = null, missing }) {
   return <p className={`flex items-center gap-2 ${value ? "" : "text-muted-foreground"}`}><Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />{value ? content : missing}</p>;
 }
 
+// Ficha completa de un jugador (server component). Carga en paralelo sus noticias y los datos del staff.
+// `canEdit` (rol editor o superior) muestra Editar/Eliminar. Lo que aún no tiene fuente (forma, rendimiento,
+// clubes interesados) se enseña como "pendiente" o vacío con aviso, nunca con cifras inventadas.
 export default async function PlayerProfile({ player, canEdit = false }) {
   const [news, staff] = await Promise.all([loadPlayerNews(player.id), loadPlayerStaffData(player.id)]);
   return <main className="min-h-screen px-2 py-5">

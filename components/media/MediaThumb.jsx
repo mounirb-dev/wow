@@ -5,16 +5,21 @@ import { Music, Play } from "lucide-react";
 import { previewKind, viewPath } from "@/lib/files.js";
 import { MacFileIcon } from "../MacIcons.jsx";
 
+// Tamaños por contexto: `grid` (rejilla del escritorio), `list` (filas de lista) y `strip` (tira de
+// miniaturas del visor). Cada tabla da el tamaño de una pieza: caja, icono de documento, insignia de
+// vídeo, triángulo de play e icono de audio.
 const boxSize = { grid: "w-16 h-16", list: "size-7", strip: "size-14" };
 const iconSize = { grid: "h-16", list: "h-7 w-6", strip: "h-14" };
 const badgeSize = { grid: "size-6", list: "size-3.5", strip: "size-5" };
 const playSize = { grid: "size-3", list: "size-2", strip: "size-2.5" };
 const musicSize = { grid: "size-7", list: "size-4", strip: "size-6" };
 
+// Marco común de la miniatura. Es decorativo (aria-hidden): el nombre del archivo ya lo lee la fila.
 function Box({ size, children }) {
   return <span aria-hidden="true" className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted ${boxSize[size]}`}>{children}</span>;
 }
 
+// Insignia de "play" sobre el fotograma para distinguir un vídeo de una foto.
 function VideoBadge({ size }) {
   return <span className={`absolute flex items-center justify-center rounded-full bg-black/60 text-white ${badgeSize[size]}`}><Play className={`fill-current ${playSize[size]}`} /></span>;
 }
@@ -29,6 +34,7 @@ export default function MediaThumb({ file, size = "grid" }) {
   const src = viewPath(file);
   if (kind === "video") {
     return <Box size={size}>
+      {/* `#t=0.1` pide el fotograma a 0,1 s: así la miniatura no sale negra (el primer fotograma suele serlo). */}
       <video src={`${src}#t=0.1`} muted playsInline preload="metadata" onError={() => setFailed(true)} className="size-full object-cover" />
       <VideoBadge size={size} />
     </Box>;

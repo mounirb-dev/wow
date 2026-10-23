@@ -1,6 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DECISION_RULES, GROUP_LABEL } from "@/lib/coach.js";
 
+// `TONE`: color del texto de la recomendación según su tono; `fmt`: un dato ausente se muestra como
+// "sin dato" en lugar de un 0 que pasaría por real.
 const TONE = { positive: "text-emerald-700 dark:text-emerald-300", negative: "text-red-700 dark:text-red-300", neutral: "text-foreground" };
 const fmt = (value) => (value === null || value === undefined ? "sin dato" : value);
 

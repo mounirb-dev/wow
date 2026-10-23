@@ -4,6 +4,7 @@ import { FileItem, FolderItem, RenameInput } from "./DesktopItems.jsx";
 import { itemClass } from "./desktop-styles.js";
 import { MacFolderIcon } from "./MacIcons.jsx";
 
+// Texto del estado vacío según el rol (un lector no puede crear nada) y el nivel (raíz o dentro de una carpeta).
 const emptyText = (isRoot, canEdit) => {
   if (!canEdit) return "Todavía no hay nada compartido aquí.";
   return isRoot ? "Crea una carpeta para organizar el trabajo del equipo." : "Arrastra archivos aquí o crea una carpeta para organizar el trabajo del equipo.";
@@ -12,6 +13,8 @@ const emptyText = (isRoot, canEdit) => {
 // Estados vacíos y rejilla/lista de iconos del escritorio. Presentacional: todo llega por props.
 // `folders`/`files` ya vienen filtrados por la búsqueda; `total` = cuántos hay sin filtrar.
 export default function DesktopContent({ loading, total, folders, files, query, list, creating, isRoot, canEdit, selected, renaming, mayConfigure, handlers }) {
+  // Tres situaciones antes de la rejilla: cargando, carpeta realmente vacía (nada que filtrar) y búsqueda
+  // sin coincidencias. Mientras se crea una carpeta nueva no se enseña ninguno de los vacíos.
   const empty = !loading && !total && !creating;
   const noResults = !loading && !empty && !folders.length && !files.length && !creating;
   if (loading) return <p className="py-16 text-center text-sm text-muted-foreground">Cargando…</p>;

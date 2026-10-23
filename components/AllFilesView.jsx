@@ -16,6 +16,8 @@ export default function AllFilesView({ onOpenFolder }) {
   const [previewFile, setPreviewFile] = useState(null);
   const closePreview = useCallback(() => setPreviewFile(null), []);
 
+  // Búsqueda en cliente, sin distinguir mayúsculas, por nombre de archivo o ruta de su carpeta. `files` es
+  // null mientras carga (distinto de [] = sin archivos), y el visor recorre solo los resultados visibles.
   const needle = query.trim().toLocaleLowerCase();
   const shown = (files ?? []).filter((file) => !needle || file.name.toLocaleLowerCase().includes(needle) || file.folderPath.toLocaleLowerCase().includes(needle));
 

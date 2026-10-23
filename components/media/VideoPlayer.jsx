@@ -5,8 +5,11 @@ import { Play } from "lucide-react";
 import { MediaControls } from "@/components/media/MediaControls";
 import { useMediaLifecycle, useMediaState } from "@/components/media/use-media-state";
 
+// Segundos que saltan las flechas ← / → del teclado.
 const SEEK_STEP_SECONDS = 5;
 
+// Entra o sale de pantalla completa sobre el contenedor (no sobre el <video>) para que los
+// controles propios sigan visibles. Los rechazos del navegador (p. ej. sin gesto del usuario) se ignoran.
 function toggleFullscreen(container) {
   if (document.fullscreenElement) {
     document.exitFullscreen?.()?.catch(() => undefined);
@@ -15,6 +18,8 @@ function toggleFullscreen(container) {
   }
 }
 
+// Zona del vídeo: el <video> con una capa transparente encima que hace de botón reproducir/pausar,
+// el icono de play cuando está parado y un mensaje accesible (role="alert") si el archivo no carga.
 function VideoStage({ videoRef, src, state }) {
   return (
     <div className="relative min-h-0 flex-1">
@@ -52,6 +57,9 @@ function VideoStage({ videoRef, src, state }) {
   );
 }
 
+// Reproductor de vídeo del visor de archivos. `active` indica si es la diapositiva visible: al dejar
+// de serlo el vídeo se pausa (useMediaLifecycle). `onError` avisa al visor de que el archivo no se puede
+// reproducir. Atajos con el contenedor enfocado: espacio/k reproduce, ←/→ salta 5 s, f pantalla completa.
 export default function VideoPlayer({ src, name, active = true, onError }) {
   const videoRef = useRef(null);
   const containerRef = useRef(null);
@@ -61,6 +69,8 @@ export default function VideoPlayer({ src, name, active = true, onError }) {
   const fullscreen = () => toggleFullscreen(containerRef.current);
 
   const handleKeyDown = (event) => {
+    // Solo con el contenedor enfocado (no con el foco en un control hijo, que ya gestiona sus teclas) y
+    // sin modificadores, para no pisar atajos del navegador como Ctrl+F.
     if (event.target !== event.currentTarget) return;
     if (event.altKey || event.ctrlKey || event.metaKey) return;
     const actions = new Map([

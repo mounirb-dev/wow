@@ -18,6 +18,9 @@ export default function AddPlayerDialog() {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Envía el formulario a POST /api/players. Los valores salen tal cual del FormData (los límites de los
+  // campos son ayuda visual; la validación de verdad la hace el servidor). Si va bien se cierra el diálogo y
+  // router.refresh() recarga la lista; si falla se muestra el mensaje del servidor y el diálogo sigue abierto.
   async function submit(event) {
     event.preventDefault();
     const player = Object.fromEntries(new FormData(event.currentTarget));

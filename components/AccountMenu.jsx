@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { LogOut, Settings, X } from "lucide-react";
 
 const JSON_HEADERS = { "content-type": "application/json" };
+// Estilos compartidos: campo de formulario y fila del menú (plegada = solo icono centrado).
 const fieldClass = "rounded-md border bg-background px-3 py-2 text-sm text-foreground";
 const rowClass = (collapsed) => `flex h-8 w-full min-w-0 items-center gap-3 rounded-md text-left text-sm text-muted-foreground transition hover:bg-secondary hover:text-foreground ${collapsed ? "justify-center px-0" : "px-3"}`;
 
@@ -18,6 +19,9 @@ export default function AccountMenu({ collapsed = false, email, emailVerified = 
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // Cambia el email (pide la contraseña actual). Al guardar, el servidor envía un enlace de
+  // confirmación al email nuevo, que queda "sin confirmar" hasta que se abre. Se comprueba el estado HTTP
+  // antes de leer el cuerpo; el mensaje de error del servidor se muestra tal cual.
   async function save(event) {
     event.preventDefault();
     if (busy) return;
@@ -40,6 +44,7 @@ export default function AccountMenu({ collapsed = false, email, emailVerified = 
     }
   }
 
+  // Reenvía el enlace de confirmación al email actual (útil si no llegó o caducó).
   async function resend() {
     if (busy) return;
     setBusy(true);

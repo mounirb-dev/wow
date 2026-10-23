@@ -10,10 +10,15 @@ import { fmtM } from "@/lib/tools.js";
 import PlayerHeatmap from "./PlayerHeatmap.jsx";
 import { Folder } from "./ui/folder-component.jsx";
 
+// Tarjeta "carpeta" de un jugador: al pulsarla abre un panel lateral con su ficha resumida.
+// OJO: "Guardar ficha" solo marca el jugador en el localStorage de este navegador (no se sincroniza ni
+// llega al servidor), y las tres cifras de Presión/Progresión/Duelos del panel son valores de muestra,
+// no datos reales del jugador. Pendiente de sustituir por métricas con fuente.
 export default function PlayerFolder({ player }) {
   const [open, setOpen] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  // El estado "guardado" se lee tras montar (en el servidor no hay localStorage) y se relee si cambia el jugador.
   useEffect(() => {
     setSaved(window.localStorage.getItem(`agentsolver:player:${player.id}`) === "saved");
   }, [player.id]);

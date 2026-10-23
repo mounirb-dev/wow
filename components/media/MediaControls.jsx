@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { formatTime } from "@/lib/files";
 
+// Botón reproducir/pausar: el icono y la etiqueta accesible cambian según el estado.
 function PlayButton({ playing, onToggle }) {
   return (
     <Button
@@ -19,6 +20,8 @@ function PlayButton({ playing, onToggle }) {
   );
 }
 
+// Barra de posición. Se desactiva mientras no se conoce la duración (metadatos sin cargar) y
+// recorta `time` a la duración para que el control nunca quede fuera de rango.
 function SeekBar({ time, duration, onSeek }) {
   return (
     <Slider
@@ -34,6 +37,8 @@ function SeekBar({ time, duration, onSeek }) {
   );
 }
 
+// Silenciar + deslizador de volumen (0–1). Silenciado se muestra a 0; el deslizador se oculta en móvil,
+// donde el volumen lo controla el dispositivo.
 function VolumeControl({ muted, volume, onToggleMute, onVolume }) {
   return (
     <>
@@ -59,7 +64,10 @@ function VolumeControl({ muted, volume, onToggleMute, onVolume }) {
   );
 }
 
-/** Barra de controles presentacional; `state` viene de useMediaState. */
+/**
+ * Barra de controles presentacional del reproductor de vídeo; `state` viene de useMediaState.
+ * `onFullscreen` es opcional: sin él no se pinta el botón de pantalla completa.
+ */
 export function MediaControls({ state, onFullscreen = null, className = "" }) {
   const base = "flex items-center gap-2 bg-background/80 px-3 py-2 text-foreground backdrop-blur";
   return (

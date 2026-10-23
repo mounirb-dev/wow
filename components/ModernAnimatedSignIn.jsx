@@ -11,6 +11,9 @@ import BrandLogo from "./BrandLogo.jsx";
 import ThemeToggle from "./ThemeToggle.jsx";
 import { Google } from "./ui/svgs/google.jsx";
 
+// Pantalla de acceso: Google (redirección OAuth) o email + contraseña (formulario POST normal a
+// /api/auth/login, sin JavaScript de por medio). `error` llega por la URL (?error=…) desde las rutas de
+// auth y se muestra tal cual; `next` es la ruta a la que volver tras entrar.
 export default function ModernAnimatedSignIn({ error, next = "/" }) {
   // Tras entrar se vuelve a `next` (p. ej. al consentimiento de /mcp/oauth); por defecto, al resumen.
   const googleHref = `/api/auth/oauth/google?next=${encodeURIComponent(next)}`;
