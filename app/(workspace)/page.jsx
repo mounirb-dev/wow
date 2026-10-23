@@ -1,5 +1,4 @@
 import Terminal from "@/components/Terminal.jsx";
-import WorkspaceShell from "@/components/WorkspaceShell.jsx";
 import { requireUser } from "@/lib/session.js";
 import { loadPlayers } from "@/lib/data.js";
 
@@ -8,5 +7,5 @@ export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const [user, players] = await Promise.all([requireUser(), loadPlayers()]);
-  return <WorkspaceShell><Terminal players={players} user={{ name: user.name, email: user.email }} /></WorkspaceShell>;
+  return <Terminal players={players} user={{ name: user.name, email: user.email }} />;
 }

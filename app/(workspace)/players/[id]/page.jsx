@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import WorkspaceShell from "@/components/WorkspaceShell.jsx";
 import PlayerProfile from "@/components/PlayerProfile.jsx";
 import { loadPlayer } from "@/lib/data.js";
 import { requireUser } from "@/lib/session.js";
@@ -18,5 +17,5 @@ export default async function PlayerPage({ params }) {
   const { id } = await params;
   const [player, context] = await Promise.all([loadPlayer(id), getWorkspaceContext()]);
   if (!player) notFound();
-  return <WorkspaceShell><PlayerProfile player={player} canEdit={Boolean(canEdit(context?.member))} /></WorkspaceShell>;
+  return <PlayerProfile player={player} canEdit={Boolean(canEdit(context?.member))} />;
 }

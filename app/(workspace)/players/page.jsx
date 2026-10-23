@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import AddPlayerDialog from "@/components/AddPlayerDialog.jsx";
 import DeletePlayerButton from "@/components/DeletePlayerButton.jsx";
 import PageHeader from "@/components/PageHeader.jsx";
-import WorkspaceShell from "@/components/WorkspaceShell.jsx";
 import { loadPlayers } from "@/lib/data.js";
 import { requireUser } from "@/lib/session.js";
 import { fmtM, monthsLeft } from "@/lib/tools.js";
@@ -23,7 +22,7 @@ export default async function PlayersPage() {
   const [players, context] = await Promise.all([loadPlayers(), getWorkspaceContext()]);
   const editable = Boolean(canEdit(context?.member));
 
-  return <WorkspaceShell><main className="min-h-screen px-2 py-5">
+  return <main className="min-h-screen px-2 py-5">
     <PageHeader eyebrow="espacio de trabajo / registros" title="Jugadores" description="Todos los jugadores del workspace en una vista operativa." actions={editable ? <AddPlayerDialog /> : null} />
     <Card className="overflow-hidden">
       <CardHeader className="border-b px-4 py-3"><p className="text-sm font-medium">Todos los jugadores · {players.length}</p></CardHeader>
@@ -46,5 +45,5 @@ export default async function PlayersPage() {
           </tr>)}</tbody></table></div>}
       </CardContent>
     </Card>
-  </main></WorkspaceShell>;
+  </main>;
 }

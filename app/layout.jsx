@@ -13,8 +13,8 @@ const themeScript = `var t;try{var s=JSON.parse(localStorage.getItem("agentsolve
 
 export const metadata = { title: "wow", description: "Tu cartera de jugadores, valorada como activos.", icons: { icon: "/web.webp" } };
 
-// Layout raíz: fuente, proveedor de tooltips y toasts globales. Cada página privada monta su
-// propio <WorkspaceShell> (barra lateral); esta capa no asume sesión.
+// Layout raíz: fuente, proveedor de tooltips y toasts globales. La barra lateral la monta
+// el layout del grupo (workspace); esta capa no asume sesión.
 export default function RootLayout({ children }) {
   return (
     <html lang="es" className={cn("font-sans", geist.variable)} suppressHydrationWarning>
